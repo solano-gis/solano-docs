@@ -9,16 +9,13 @@ The fix: fetch tiles from one zoom level deeper than what the view requests, com
 
 ## The difference
 
-<Columns cols={2}>
-  <div>
-    <img src="/images/hires-standard.jpg" alt="Standard tile rendering showing visible tile seams and softer detail" style={{ width: '200%', maxWidth: 'none' }} />
-    **Standard** — tiles fetched at the view's native LOD. Visible tile grid seams, softer edges on structures and vegetation.
-  </div>
-  <div>
-    <img src="/images/hires-supersampled.jpg" alt="Supersampled tile rendering with no seams and sharper detail" style={{ width: '200%', maxWidth: 'none' }} />
-    **Supersampled** — same view, but each tile is composited from 4 child tiles at LOD+1. No seams, sharper rooftops and tree canopy.
-  </div>
-</Columns>
+**Standard** — tiles fetched at the view's native LOD. Visible tile grid seams, softer edges on structures and vegetation.
+
+<img src="/images/hires-standard.jpg" alt="Standard tile rendering showing visible tile seams and softer detail" />
+
+**Supersampled** — same view, but each tile is composited from 4 child tiles at LOD+1. No seams, sharper rooftops and tree canopy.
+
+<img src="/images/hires-supersampled.jpg" alt="Supersampled tile rendering with no seams and sharper detail" />
 
 The improvement is subtle at normal viewing distance but significant for two audiences: users zooming into specific structures, and AI vision models analyzing screenshots where every pixel of detail helps distinguish building edges, roof materials, and vegetation boundaries.
 
