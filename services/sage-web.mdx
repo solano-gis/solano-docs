@@ -44,7 +44,7 @@ Instead of sending all 59 tool schemas (~16K tokens) on every request, tools are
 - Property: `geocode_address`, `get_parcel_details`, `get_zoning`, `get_flood_zone`, `get_fire_hazard_zone`, `get_elevation`, `get_special_districts`, `find_nearby`
 - Maps: `show_map`, `update_map`, `locate_in_view`, `query_map_features`
 - Reference: `get_solano_context`, `get_layer_context`
-- Meta: `load_tool_group`
+- Meta: `load_tool_group`, `load_skill`
 
 **11 on-demand groups** — loaded when Claude calls `load_tool_group()`:
 
@@ -63,6 +63,12 @@ Instead of sending all 59 tool schemas (~16K tokens) on every request, tools are
 | `oblique` | 1 | Oblique aerial imagery |
 
 This cuts schema overhead by ~50% while preserving full capability.
+
+### Domain knowledge (skills)
+
+Alongside tool groups, sage-web bundles **domain knowledge** from [sage-knowledge](/knowledge) — curated expertise across 10 skill areas. The AI discovers available skills via an `<available_knowledge>` XML block in the system prompt (~750 tokens), then loads specific skills on demand via `load_skill()`.
+
+Skills complement tool groups: tool groups provide **tool schemas** (what tools are available), while skills provide **domain knowledge** (how to interpret results, what workflows to follow, what gotchas exist). See the [Knowledge Base](/knowledge) page for details.
 
 ## System prompt
 
@@ -92,6 +98,7 @@ After 1-2 tool calls with map screenshots, context can approach the 200K limit. 
 | `app/api/chat/route.ts` | Main API handler — MCP connections, AI streaming, tool orchestration |
 | `lib/prompts.ts` | System prompt — AI behavioral guide |
 | `lib/tool-groups.ts` | Core tools + on-demand group definitions |
+| `lib/skills.ts` | Domain knowledge loader (sage-knowledge integration) |
 | `lib/mcp.ts` | Dual MCP client factory (sage-gov + sage-gis) |
 | `lib/token-budget.ts` | Context window optimization |
 | `lib/locate-in-view.ts` | Gemini Flash vision detection pipeline |

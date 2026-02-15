@@ -1,0 +1,198 @@
+---
+title: "Knowledge Base"
+description: "How SAGE loads domain knowledge — the skill system behind intelligent answers"
+---
+
+SAGE's responses are driven by more than tool calls. Before answering a specialized question, the AI loads **domain knowledge** — curated instructions, gotchas, response patterns, and reference material maintained in a dedicated repository.
+
+This is what separates "here's the raw data" from "here's what this data means and what you should do next."
+
+## How it works
+
+```
+sage-knowledge/                     ← canonical repo (human-editable)
+    ├── property-research/
+    │   ├── SKILL.md                ← instructions + context
+    │   └── references/             ← deep-dive reference files
+    │       ├── parcel-data-fields.md
+    │       ├── prop13-assessment.md
+    │       └── address-points.md
+    ├── hazards-environment/
+    │   ├── SKILL.md
+    │   └── references/
+    └── ... (10 domains)
+
+        ↓  bundled at build time
+
+sage-web/data/skills/               ← runtime copy
+    ├── manifest.json               ← discovery metadata
+    └── content/                    ← all SKILL.md + reference files
+```
+
+At startup, sage-web reads `manifest.json` and injects an `<available_knowledge>` block into the system prompt. This costs ~750 tokens and tells the AI what domains exist. When a query matches a domain, the AI calls `load_skill()` to get the full instructions before answering.
+
+## Three-tier loading
+
+Knowledge loads progressively to minimize token usage:
+
+| Tier | What | When | Tokens |
+|------|------|------|--------|
+| **Discovery** | Skill names + descriptions | Always (system prompt) | ~750 |
+| **Instructions** | SKILL.md body (context, gotchas, patterns) | On demand via `load_skill()` | 500–2,000 per skill |
+| **References** | Deep-dive files (field semantics, regulatory detail) | On demand via `get_solano_context` | 500–5,000 per file |
+
+A typical specialized query loads 1 skill + 0–1 reference files = 1,500–4,000 tokens of domain knowledge.
+
+## Skills complement tools
+
+Skills and tool groups serve different purposes:
+
+| | `load_skill()` | `load_tool_group()` |
+|---|---|---|
+| **Loads** | Domain knowledge | Tool schemas |
+| **Content** | Gotchas, response patterns, field semantics | Tool names, parameters, descriptions |
+| **Example** | "Assessed value ≠ market value due to Prop 13" | `search_parcels(criteria: { zoning: "A-40" })` |
+| **Source** | sage-knowledge repo → bundled files | MCP servers → tool discovery |
+
+A budget question typically loads both:
+- `load_skill({ skills: ["budget-staffing"] })` — how to interpret budget data
+- `load_tool_group({ groups: ["budget"] })` — tools to query budget data
+
+## Skill domains (10)
+
+<AccordionGroup>
+  <Accordion title="property-research — Property lookups and parcel data">
+    Property lookups, parcel details, assessment values, building characteristics, address geocoding, and elevation/imagery. Covers Prop 13 assessed vs market value, parcel data field semantics, and address point jurisdiction nuances.
+
+    **References:** parcel-data-fields.md, prop13-assessment.md, address-points.md
+  </Accordion>
+
+  <Accordion title="zoning-land-use — Zoning codes and regulations">
+    Zoning code lookups, permitted uses, permit requirements, ADU/secondary dwelling rules, subdivision regulations, and county code research. Handles automatic city vs county jurisdiction routing.
+
+    **References:** zoning-codes.md, adu-rules.md, county-code-guide.md
+  </Accordion>
+
+  <Accordion title="hazards-environment — Flood, fire, and elevation">
+    FEMA flood zones, CAL FIRE fire hazard severity zones, LiDAR elevation data (DSM/DTM/CHM), defensible space requirements, and building code implications. Key distinction: fire hazard is not fire risk.
+
+    **References:** fire-hazard.md, flood-zones.md, lidar-elevation.md
+  </Accordion>
+
+  <Accordion title="jurisdiction-services — Jurisdiction routing and districts">
+    Jurisdiction routing (7 cities + unincorporated), special district lookups (fire, water, school, garbage, cemetery, reclamation, GSA), Board of Supervisors districts, contacts, and disclaimers. Critical rule: mailing address city does not equal legal jurisdiction.
+
+    **References:** jurisdiction-routing.md, special-districts.md, contacts.md, disclaimers.md
+  </Accordion>
+
+  <Accordion title="budget-staffing — Budget and organizational structure">
+    County budget analysis (FY2025-26, $1.65B) and organizational staffing data (3,285 FTE). Department budgets, spending, revenue, staffing levels, position counts, job classifications, and org structure.
+
+    **References:** org-structure.md, workforce-analytics.md
+  </Accordion>
+
+  <Accordion title="general-plan-policy — General Plan research">
+    2008 General Plan policy research across 12 chapters. County land use policy, agricultural preservation, housing goals, environmental resources, public safety, economic development, and long-range planning.
+
+    **References:** general-plan-guide.md
+  </Accordion>
+
+  <Accordion title="maps-spatial — Maps and GIS layers">
+    Map visualization, GIS layer discovery, spatial analysis, and aerial imagery. Inline and interactive maps, layer overlays, directions, infographics, and GIS data downloads.
+
+    **References:** map-tools-guide.md, gis-layers-catalog.md, spatial-grounding.md
+  </Accordion>
+
+  <Accordion title="meetings-governance — Board meetings and decisions">
+    Board of Supervisors and ReGIS committee meeting minutes, agendas, decisions, votes, and resolutions. BOS (Jan 2024–present) and ReGIS GIS Consortium (Jun 2021–present).
+
+    **References:** meeting-minutes-guide.md
+  </Accordion>
+
+  <Accordion title="county-overview — General Solano County context">
+    Geography, demographics, economy, cities, landmarks, transportation, and history. Provides grounding context for general county questions.
+
+    **References:** solano-encyclopedia.md
+  </Accordion>
+
+  <Accordion title="workflows — Cross-domain workflow patterns">
+    Multi-step workflow patterns that chain tools across domains — development feasibility, permit notifications, policy-to-regulation tracing, property portfolio analysis, and service area identification.
+
+    **References:** policy-to-regulation.md
+  </Accordion>
+</AccordionGroup>
+
+## File format
+
+Each skill follows the [Agent Skills](https://agentskills.io) open standard:
+
+```yaml
+# SKILL.md
+---
+name: property-research
+description: "Property lookups, parcel details, assessment values..."
+---
+
+## When to Use This Skill
+Load this skill when the user asks about...
+
+## Key Tools
+- geocode_address — resolve addresses to coordinates + APN
+- get_parcel_details — full property information
+...
+
+## Critical Context
+- Assessed value ≠ market value (Prop 13)
+- sitecity ≠ tac_city (mailing vs tax jurisdiction)
+...
+
+## Response Pattern
+1. Look up the property
+2. Report key findings
+3. Explain what it means
+4. Note caveats
+5. Provide next steps + disclaimer
+```
+
+## Maintaining the knowledge base
+
+**Repository:** `solano-gis/sage-knowledge`
+
+The knowledge base is designed for domain expert review:
+
+- Fire marshal reviews `hazards-environment/references/fire-hazard.md`
+- Planning department reviews `zoning-land-use/references/zoning-codes.md`
+- Assessor's office reviews `property-research/references/prop13-assessment.md`
+- GIS team reviews `maps-spatial/references/gis-layers-catalog.md`
+
+All changes go through GitHub pull requests. Git history provides the audit trail.
+
+### Sync workflow
+
+After editing files in sage-knowledge:
+
+```bash
+# 1. Rebuild manifest
+cd sage-knowledge
+npm run build              # generates manifest.json + manifest.xml
+
+# 2. Copy to sage-web
+cp -r . ../sage-web/data/skills/content/
+cp manifest.json manifest.xml ../sage-web/data/skills/
+
+# 3. Verify
+cd ../sage-web
+npm test                   # skill tests catch missing/broken files
+npm run build              # full build verification
+```
+
+### Content stats
+
+| Metric | Count |
+|--------|-------|
+| Skill domains | 10 |
+| SKILL.md files | 10 |
+| Reference files | 22 |
+| Total files | 34 (including manifests) |
+| Discovery metadata | ~750 tokens (always loaded) |
+| Avg skill body | ~1,200 tokens (loaded on demand) |

@@ -11,6 +11,13 @@ SAGE is split across four independent Vercel deployments. This isn't a microserv
 ## System diagram
 
 ```
+                    ┌──────────────────┐
+                    │  sage-knowledge  │
+                    │  10 skill domains│
+                    │  Domain expertise│
+                    └────────┬─────────┘
+                             │ bundled at build
+                             ▼
 ┌─────────────────────────────────────────────────┐
 │                   sage-web                       │
 │          Chat UI + AI Orchestration              │
@@ -29,11 +36,19 @@ SAGE is split across four independent Vercel deployments. This isn't a microserv
 
 <AccordionGroup>
   <Accordion title="sage-web — Chat UI + AI orchestration">
-    **What it does:** Hosts the chat interface, manages conversations, orchestrates AI tool calls, handles map screenshots, optimizes token budgets.
+    **What it does:** Hosts the chat interface, manages conversations, orchestrates AI tool calls, handles map screenshots, optimizes token budgets. Bundles domain knowledge from sage-knowledge and exposes it via `load_skill`.
 
-    **What it accesses:** Only what sage-gov and sage-gis return via MCP. Cannot query databases or GIS services directly. This is the governance surface — authentication, moderation, audit logging, disclaimers, and rate limiting live here.
+    **What it accesses:** Only what sage-gov and sage-gis return via MCP, plus bundled read-only skill files from sage-knowledge. Cannot query databases or GIS services directly. This is the governance surface — authentication, moderation, audit logging, disclaimers, and rate limiting live here.
 
     **If it breaks:** No chat. sage-gov and sage-gis continue serving data to any other MCP client. sage-map continues as a standalone map viewer.
+  </Accordion>
+
+  <Accordion title="sage-knowledge — Domain knowledge base">
+    **What it does:** Contains curated domain expertise across 10 skill areas — property research workflows, zoning interpretation, hazard analysis patterns, budget navigation, and more. Content is bundled into sage-web at build time and loaded progressively via the `load_skill` tool.
+
+    **What it accesses:** Nothing. This is a static content repository with no runtime, no API, and no external access. It's a build-time dependency of sage-web only.
+
+    **If it breaks:** AI still functions but loses domain-specific guidance. Tool calls work; interpretation quality degrades. The `<available_knowledge>` block disappears from the system prompt, and `load_skill` returns nulls.
   </Accordion>
 
   <Accordion title="sage-gov — Public records MCP server">
@@ -103,11 +118,12 @@ SAGE is split across four independent Vercel deployments. This isn't a microserv
 
 All four services deploy to Vercel via GitHub push-to-deploy:
 
-| Service | Repository | URL |
-|---------|-----------|-----|
-| sage-web | `solano-gis/sage-web` | (private) |
-| sage-gis | `solano-gis/sage-gis` | `sage-gis.vercel.app/api/mcp` |
-| sage-gov | `solano-gis/sage-gov` | `sage-gov.vercel.app/api/mcp` |
-| sage-map | `solano-gis/sage-map` | `sage-map.vercel.app` |
+| Service | Repository | URL | Runtime |
+|---------|-----------|-----|---------|
+| sage-web | `solano-gis/sage-web` | (private) | Vercel |
+| sage-gis | `solano-gis/sage-gis` | `sage-gis.vercel.app/api/mcp` | Vercel |
+| sage-gov | `solano-gis/sage-gov` | `sage-gov.vercel.app/api/mcp` | Vercel |
+| sage-map | `solano-gis/sage-map` | `sage-map.vercel.app` | Vercel |
+| sage-knowledge | `solano-gis/sage-knowledge` | (none — build dependency) | Static |
 
-Each repo has its own `CLAUDE.md` with service-specific development context.
+Each repo has its own `CLAUDE.md` with service-specific development context. sage-knowledge has no deployment — its content is copied into sage-web's `data/skills/` directory during the build sync process.
