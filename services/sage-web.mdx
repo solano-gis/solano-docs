@@ -40,10 +40,11 @@ Response streams back to browser
 
 Instead of sending all 59 tool schemas (~16K tokens) on every request, tools are split into **core** (always available) and **groups** (loaded on demand):
 
-**14 core tools** (~5K tokens) — always available:
-- Property: `geocode_address`, `get_parcel_details`, `get_zoning`, `get_flood_zone`, `get_fire_hazard_zone`, `get_elevation`, `get_special_districts`, `find_nearby`
+**17 core tools** (~5K tokens) — always available:
+- Property: `geocode_address`, `search_places`, `get_parcel_details`, `get_zoning`, `get_flood_zone`, `get_fire_hazard_zone`, `get_elevation`, `get_special_districts`, `get_supervisor_district`, `find_nearby`
 - Maps: `show_map`, `update_map`, `locate_in_view`, `query_map_features`
-- Reference: `get_solano_context`, `get_layer_context`
+- Reference: `get_layer_context`
+- Imagery: `get_oblique_imagery`
 - Meta: `load_tool_group`, `load_skill`
 
 **11 on-demand groups** — loaded when Claude calls `load_tool_group()`:

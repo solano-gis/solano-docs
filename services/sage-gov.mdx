@@ -1,17 +1,17 @@
 ---
 title: "sage-gov"
-description: "Public records MCP server — 31 tools for budget, code, plans, and meetings"
+description: "Public records MCP server — 30 tools for budget, code, plans, and meetings"
 ---
 
 **Repository:** `solano-gis/sage-gov` | **Endpoint:** `sage-gov.vercel.app/api/mcp` | **Tech:** Next.js 15, MCP handler, SQLite/JSON
 
-sage-gov is the public records engine. It provides 31 MCP tools for searching and retrieving government documents — budget, county code, General Plan, organizational chart, and Board of Supervisors meeting minutes. All data is static, public, and bundled at deploy time.
+sage-gov is the public records engine. It provides 30 MCP tools for searching and retrieving government documents — budget, county code, General Plan, organizational chart, and Board of Supervisors meeting minutes. All data is static, public, and bundled at deploy time.
 
 <Note>
 sage-gov makes **zero external API calls** at runtime. All data is pre-processed JSON files shipped with the deployment. This means zero latency from external services and zero risk of exposing internal systems.
 </Note>
 
-## Tool inventory (31 tools)
+## Tool inventory (30 tools)
 
 ### Budget (6 tools)
 
@@ -82,14 +82,6 @@ sage-gov makes **zero external API calls** at runtime. All data is pre-processed
 
 **Committees:** Board of Supervisors (BOS), ReGIS (Regional GIS Consortium)
 
-### Context/Reference (3 tools)
-
-| Tool | Purpose |
-|------|---------|
-| `get_solano_context` | Reference material on specific topics |
-
-**Available topics:** jurisdiction, zoning, prop13, adu, flood, fire, contacts, districts, disclaimers
-
 ## Data sources
 
 All data is pre-processed and bundled as JSON files:
@@ -101,7 +93,6 @@ All data is pre-processed and bundled as JSON files:
 | Budget | JSON | ~2 MB | FY2025-26 Recommended Budget |
 | Org Chart | JSON | 240 KB | 3,284 positions, departments, divisions |
 | Meeting Minutes | JSON (per committee) | ~500 KB | BOS and ReGIS meetings |
-| Reference docs | Markdown (23 files) | ~200 KB | Zoning codes, flood zones, ADU rules, contacts, etc. |
 
 ## Data pipeline
 
