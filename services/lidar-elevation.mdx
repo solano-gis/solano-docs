@@ -103,6 +103,10 @@ Both sage-gis (AI tool) and sage-map (mouse-over readout) use the same approach:
 
 When a LiDAR layer is visible on the interactive map, a widget appears in the bottom-right showing the elevation value under the cursor — updating continuously as the mouse moves.
 
+<Frame caption="Digital Surface Model rendered on the interactive map. The elevation readout in the bottom-right streams values as the cursor moves — here showing SURFACE 108.2 ft over downtown Vallejo.">
+  ![LiDAR DSM layer with live elevation readout](/images/lidar-example-screenshot.jpg)
+</Frame>
+
 The implementation (`useElevationReadout` hook in sage-map):
 
 - **Pointer-move listener** — Fires on every cursor movement over the map view. Converts screen position to WGS84 to State Plane.
