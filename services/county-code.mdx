@@ -1,0 +1,132 @@
+---
+title: "County Code"
+description: "365 pages of zoning law parsed into structured JSON — how recursive search over hierarchical data lets AI reason through cross-references and exemptions"
+---
+
+SAGE provides full-text access to the Solano County Code — zoning regulations, subdivision rules, grading permits, park rules, and more. The AI can search across all chapters, retrieve specific sections by ID, and trace cross-references between related provisions. This turns a dense legal corpus into something an AI can navigate with precision.
+
+The key insight: structured data beats keyword search. When county code sections reference other sections ("except as provided in Section 26-15.2"), the AI follows the chain — loading the referenced section, checking its conditions, and synthesizing the full answer. A search engine returns fragments. SAGE returns reasoning.
+
+**Data source:** Solano County Code, published by the county and parsed into structured JSON. 8 chapters, 323 sections, covering the land use regulations most relevant to GIS and planning queries.
+
+## What's in the data
+
+| Chapter | Title | Sections | Typical questions |
+|---------|-------|----------|-------------------|
+| 19 | Parks, Recreation, Public Property | 31 | Camping rules, boating, park reservations |
+| 23 | Refuse, Garbage, Disposal | 28 | Trash collection, illegal dumping |
+| 24 | Roads, Streets, Encroachments | 16 | Road encroachment permits, access |
+| **26** | **Subdivisions** | **41** | Lot splits, parcel maps, exemptions |
+| 26.5 | Underground Utilities | 10 | Utility undergrounding requirements |
+| **28** | **Zoning Regulations** | **166** | Permitted uses, setbacks, permits, ADUs |
+| 30 | Address Numbering | 9 | Address assignment rules |
+| 31 | Grading, Drainage, Erosion Control | 22 | Grading permits, erosion plans |
+
+Chapter 28 (Zoning) is the largest — 166 sections across 5 articles covering everything from agricultural district use tables to ADU regulations.
+
+## What the tools do
+
+Four MCP tools provide different access patterns:
+
+```
+User: "Can I host weddings on my A-40 property?"
+
+→ load_tool_group("county_code")
+→ search_county_code("agritourism events", chapter: "28")
+→ get_county_code_sections(["28.75", "28.21.20"])
+→ AI traces: Section 28.75 governs agritourism, Table 28.21A shows
+  permit requirements per zone, wedding events need a Special Events
+  permit under 28.75.40
+```
+
+| Tool | Purpose | Parameters |
+|------|---------|------------|
+| `search_county_code` | Keyword search across all sections | `query`, optional `chapter` filter, `max_results` |
+| `get_county_code_sections` | Retrieve full text by section ID | `section_ids` (up to 20 per call) |
+| `list_county_code_chapters` | Browse available chapters | None |
+| `list_county_code_sections` | List all sections in a chapter | `chapter` number |
+
+The typical pattern: search first to find relevant section IDs, then retrieve the full text. Or if the AI already knows the section (from skill knowledge), skip straight to retrieval.
+
+## JSON data structure
+
+Each chapter is a single JSON file with a three-level hierarchy:
+
+```
+Chapter
+├── chapter: "28"
+├── title: "Zoning Regulations"
+└── articles: [
+    ├── Article I: "General Provisions"
+    │   └── sections: [
+    │       ├── { id: "28.01", title: "Definitions", text: "...", ordinances: [] }
+    │       ├── { id: "28.02", title: "Purpose of Zoning Plan", text: "...", ordinances: [] }
+    │       └── ...
+    │   ]
+    ├── Article II: "Districts and Allowable Uses"
+    │   └── sections: [
+    │       ├── { id: "28.21.20", title: "Agriculture Districts Uses and Permit Requirements",
+    │       │     text: "...", ordinances: [], tables: [TABLE 28.21A] }
+    │       └── ...
+    │   ]
+    └── ...
+]
+```
+
+Each section carries:
+- **id** — Section number (e.g., `"28.21.20"`, `"26-15.1"`)
+- **title** — Section heading
+- **text** — Full body text with formatting preserved as markdown
+- **ordinances** — Array of ordinance numbers that created or amended the section
+- **tables** — (Chapter 28 only) Structured permitted-use matrices with zones, permit types, and cross-references
+
+The zoning use tables are particularly valuable — they're parsed into machine-readable objects with zone columns, permit type codes (`A` = Allowed, `AP` = Administrative Permit, `MUP` = Minor Use Permit, `UP` = Use Permit), and regulation cross-references.
+
+## How it was built
+
+The county code is published as HTML on the county's website. A custom TypeScript parser (JSDOM-based) extracts structure from the HTML:
+
+1. **Download** — Raw HTML saved per chapter/article from the county code portal
+2. **Parse** — `h3.Cite` elements identify section boundaries; `p.P0` elements contain body text; `<table>` elements are converted to structured data or markdown
+3. **Group** — Sections organized into articles by section number prefix (e.g., `28.0x` → Article I, `28.1x–28.6x` → Article II)
+4. **Output** — Clean JSON written to `data/codes/solano/chapter-{N}-{name}.json`
+
+The raw HTML carried ~100-200 characters of inline CSS per table cell. Parsing strips all styling and reduces file size by about 75% — Chapter 28 went from ~1.7MB of HTML to ~385KB of structured JSON.
+
+## How search works
+
+The search implementation prioritizes simplicity and predictability:
+
+1. **Lazy loading** — Chapter JSON files are loaded on first access, then cached in memory
+2. **Section index** — Every section is indexed by normalized ID in a flat Map for O(1) lookups
+3. **Keyword search** — Case-insensitive substring matching across section titles and body text
+4. **Ranking** — Title matches sort above body-text matches; within each tier, sorted by section ID
+5. **Snippets** — Text matches return a window of context around the match point
+
+No fuzzy matching, no stemming, no relevance scoring. The simplicity is intentional — the AI handles disambiguation. When a search returns 10 results, the AI reads the titles and snippets, identifies which sections are relevant, and calls `get_county_code_sections` to load the full text of the ones that matter.
+
+## Why structured data matters
+
+The demo that originally sold this approach was a grading permit question: "Does my client need a grading permit?"
+
+A keyword search for "grading" hits Chapter 31 and returns fragments. But the answer depends on cross-references — the agricultural exemption is in a different section than the permit requirements, and the definition of "grading" that triggers the threshold is in yet another. A search engine gives you pieces. The structured hierarchy lets the AI load the full chapter, trace the cross-references, and connect exemptions to definitions.
+
+The zoning code is 365 pages of recursive legalese — sections reference other sections, exemptions qualify other exemptions, and use tables point to regulation sections for conditions. Giving the AI section-level retrieval with full text (not snippets) means it can follow these chains the way a planner would: read the rule, check the exception, verify the definition, then synthesize.
+
+## Integration with the AI
+
+County code tools are **lazy-loaded** — not available by default. When a user asks about zoning, permits, or regulations, the AI:
+
+1. Loads the `zoning-land-use` skill (knowledge about how to interpret county code)
+2. Loads the `county_code` tool group (the four search/retrieve tools)
+3. Searches or retrieves the relevant sections
+4. Cross-references with other data (parcel zoning, flood zone, General Plan policies)
+
+The skill knowledge includes a chapter index mapping common questions to specific sections — so the AI often skips search entirely and goes straight to the right section IDs.
+
+## Limitations
+
+- **8 chapters only:** The full county code has more chapters, but these cover the land use and development regulations most relevant to GIS queries.
+- **Manual updates:** When the Board of Supervisors amends the code, the JSON must be re-parsed from updated HTML. No automated sync.
+- **No fuzzy search:** Exact substring only. Searching "grading" won't match "grade" — but the AI compensates by trying multiple query variations.
+- **Unincorporated only:** The Solano County Code applies to unincorporated areas. The seven incorporated cities have their own municipal codes (not included).

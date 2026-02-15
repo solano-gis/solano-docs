@@ -45,7 +45,8 @@
             "group": "Feature Deep Dives",
             "pages": [
               "services/oblique-imagery",
-              "services/lidar-elevation"
+              "services/lidar-elevation",
+              "services/county-code"
             ]
           }
         ]
