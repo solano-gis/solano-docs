@@ -44,7 +44,8 @@
           {
             "group": "Feature Deep Dives",
             "pages": [
-              "services/oblique-imagery"
+              "services/oblique-imagery",
+              "services/lidar-elevation"
             ]
           }
         ]
