@@ -40,6 +40,12 @@
               "services/sage-gov",
               "services/sage-map"
             ]
+          },
+          {
+            "group": "Feature Deep Dives",
+            "pages": [
+              "services/oblique-imagery"
+            ]
           }
         ]
       },

@@ -1,0 +1,101 @@
+---
+title: "Oblique Imagery"
+description: "Angled aerial photography from Sanborn surveys — how SAGE serves high-res crops from 50MB Cloud Optimized GeoTIFFs"
+---
+
+SAGE provides oblique (angled) aerial imagery for any location in Solano County. Unlike standard nadir (top-down) aerials, oblique views show building facades, roof details, and terrain from an angle — useful for property assessment, damage inspection, and understanding 3D context.
+
+**Data provider:** Sanborn aerial surveys (2022-2024), 5-camera system capturing N/S/E/W obliques + nadir per flight line.
+
+## What the tool does
+
+`get_oblique_imagery` takes a coordinate and returns high-resolution cropped images displayed inline in the chat. Each crop is extracted from a Cloud Optimized GeoTIFF (COG) — typically 50-75MB — but only the relevant tiles are fetched via HTTP range requests.
+
+```
+User: "Show me 675 Texas St from the south"
+
+→ geocode_address("675 Texas St, Fairfield")
+→ get_oblique_imagery(lat, lon, direction: "south")
+→ Inline JPEG crop displayed in chat
+```
+
+## Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `latitude` | number | required | WGS84 latitude |
+| `longitude` | number | required | WGS84 longitude |
+| `direction` | string | `"all"` | `north`, `south`, `east`, `west`, `nadir`, or `all` |
+| `year` | number | most recent | `2022`, `2023`, or `2024` |
+| `zoom` | number | `19` | Detail level, ArcGIS-style zoom (15-20) |
+
+## Zoom levels
+
+The `zoom` parameter maps ArcGIS-style zoom levels to COG pyramid levels. Higher zoom = more detail, smaller area. Lower zoom = less detail, wider view.
+
+| Zoom | COG Level | Scale | Coverage | Use case |
+|------|-----------|-------|----------|----------|
+| 20 | 0 (full res) | ~2-3" GSD | Single building | Roof detail, solar panels, HVAC |
+| 19 | 0 (full res) | ~2-3" GSD | Building + immediate context | Default. Facade inspection, building assessment |
+| 18 | 1 (1:2) | ~5" GSD | City block | Site context, adjacent structures |
+| 17 | 2 (1:4) | ~10" GSD | Several blocks | Neighborhood context |
+| 16 | 3 (1:8) | ~20" GSD | Quarter mile | Area overview |
+| 15 | 4 (1:16) | ~40" GSD | Half mile+ | Wide area, downtown context |
+
+The AI uses these naturally — "zoom in on the roof" triggers zoom 20 with nadir direction, "show me the neighborhood" triggers zoom 16.
+
+## Pipeline architecture
+
+```
+                Sanborn FindFootprints API
+                        │
+                        ▼
+                ┌───────────────┐
+                │  sage-gis     │
+                │  MCP tool     │─── metadata (directions, URLs, footprints)
+                └───────┬───────┘
+                        │ self-call via production URL
+                        ▼
+                ┌───────────────┐
+                │  /api/        │
+                │  oblique-     │─── fetches COG tiles via range requests
+                │  preview      │    from services.sanborn.com
+                └───────┬───────┘
+                        │
+                        ▼
+                  JPEG crop image
+                  (base64 → inline)
+```
+
+### Step by step
+
+1. **Footprint lookup** — The MCP tool queries Sanborn's `FindFootprints` API with the target coordinate (projected to State Plane CA Zone 2). Returns metadata for available oblique images: camera direction, COG URL, image dimensions, and footprint corners.
+
+2. **Best image selection** — For each requested direction, selects the image whose footprint center is closest to the target point (least off-center distortion).
+
+3. **Crop URL construction** — Builds a URL to the internal `/api/oblique-preview` route with the COG source URL, target coordinate, footprint corners, crop size, and COG pyramid level.
+
+4. **COG range-request fetch** — The preview route opens the COG via HTTP range requests (no full download), computes a homography from ground coordinates to pixel space, and reads only the intersecting tiles for the crop window.
+
+5. **Image encoding** — Raw YCbCr raster data is converted to RGBA, encoded as JPEG (75% quality), and returned with dimension headers.
+
+6. **Inline display** — The MCP tool receives the JPEG as base64, attaches it as an image content block, and the chat UI renders it inline.
+
+## Homography transform
+
+The core math problem: given a ground coordinate in State Plane feet, find the corresponding pixel in an oblique image. This isn't a simple affine transform because oblique images have perspective distortion.
+
+The solution is a **projective (homography) transform** computed from 4 known correspondences — the footprint corners in ground space map to the image corners in pixel space. This gives an 8-parameter transform that handles the perspective projection.
+
+The homography is computed at full-resolution dimensions, then pixel coordinates are scaled by the COG level's reduction factor. This means the same footprint data works at any zoom level.
+
+## COG proxy security
+
+The `/api/oblique-preview` route only proxies requests to `services.sanborn.com` — the domain is allowlisted to prevent open proxy abuse. Responses are cached aggressively (7 days on CDN, 1 day in browser) since oblique imagery doesn't change.
+
+## Limitations
+
+- **Coverage:** County-wide but not every location has all 5 directions. Remote or edge areas may have fewer views.
+- **Currency:** 2022-2024 captures only. Structures built after the flight date won't appear.
+- **Nadir vs standard aerials:** For top-down views, the regular aerial imagery layers (2004-2025) in the interactive map are usually better.
+- **Crop window:** Fixed 1500px square crop at the target coordinate. If the target projects near the edge of the source image, the crop shifts to stay within bounds.
