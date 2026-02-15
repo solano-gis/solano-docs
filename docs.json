@@ -46,7 +46,8 @@
             "pages": [
               "services/oblique-imagery",
               "services/lidar-elevation",
-              "services/county-code"
+              "services/county-code",
+              "services/hires-tiles"
             ]
           }
         ]

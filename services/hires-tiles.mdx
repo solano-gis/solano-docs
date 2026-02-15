@@ -1,0 +1,93 @@
+---
+title: "Hi-Res Tile Supersampling"
+description: "Fetching 4 tiles instead of 1 to double raster detail on aerial imagery — sharper maps for humans and AI vision alike"
+---
+
+SAGE's interactive map displays aerial imagery and basemap tiles from ArcGIS Online. These are raster tiles — pre-rendered images at fixed zoom levels. At any given zoom, the ESRI SDK requests 256×256 pixel tiles that match the view's screen resolution. This is fine for panning around, but when SAGE captures a screenshot to send to the AI for vision analysis, the result is soft. A `takeScreenshot({ width: 2184 })` call upscales the canvas, but raster tiles stay at their original resolution — bilinear interpolation produces mush.
+
+The fix: fetch tiles from one zoom level deeper than what the view requests, composite them down, and return crisp tiles at 2× the native detail.
+
+## The difference
+
+<Columns cols={2}>
+  <div>
+    <img src="/images/hires-standard.jpg" alt="Standard tile rendering showing visible tile seams and softer detail" style={{ width: '200%', maxWidth: 'none' }} />
+    **Standard** — tiles fetched at the view's native LOD. Visible tile grid seams, softer edges on structures and vegetation.
+  </div>
+  <div>
+    <img src="/images/hires-supersampled.jpg" alt="Supersampled tile rendering with no seams and sharper detail" style={{ width: '200%', maxWidth: 'none' }} />
+    **Supersampled** — same view, but each tile is composited from 4 child tiles at LOD+1. No seams, sharper rooftops and tree canopy.
+  </div>
+</Columns>
+
+The improvement is subtle at normal viewing distance but significant for two audiences: users zooming into specific structures, and AI vision models analyzing screenshots where every pixel of detail helps distinguish building edges, roof materials, and vegetation boundaries.
+
+## How it works
+
+For every tile the ESRI SDK requests at level N, the `HiResTileLayer` fetches 4 tiles at level N+1 (the 2×2 child tiles that cover the same area), composites them onto a canvas at half-size, and returns the result. The SDK sees a normal 256×256 tile — it doesn't know the pixels came from a deeper zoom level.
+
+```
+Standard tile fetch (LOD 15):         Supersampled fetch:
+┌──────────┐                          ┌─────┬─────┐  LOD 16
+│           │                          │ TL  │ TR  │  (4 fetches)
+│  1 tile   │          →               ├─────┼─────┤
+│  256×256  │                          │ BL  │ BR  │
+└──────────┘                          └─────┴─────┘
+                                            ↓ composite
+                                      ┌──────────┐
+                                      │  1 tile   │  256×256 canvas
+                                      │  2× detail│  (returned)
+                                      └──────────┘
+```
+
+## Implementation
+
+Two files in sage-map:
+
+**`lib/esri/HiResTileLayer.ts`** — A custom `BaseTileLayer` subclass (via ESRI's `createSubclass` pattern). The core is the `fetchTile` override:
+
+1. If supersampling is disabled or the source is already at max LOD → passthrough (single tile fetch, no change)
+2. Otherwise, compute the 4 child tile addresses: `(level+1, row*2+r, col*2+c)` for each quadrant
+3. Fetch all 4 via `esriRequest` with the caller's `AbortSignal` passed through
+4. `Promise.allSettled` — if a quadrant fails (404 at tile edge), that corner is transparent, the other 3 still render
+5. Draw each child tile into a canvas at half-size (128×128 into its quadrant of a 256×256 canvas)
+6. Return the canvas
+
+**`app/components/map/hooks/useHiResTiles.ts`** — A React hook that finds all raster `TileLayer` instances in the loaded WebMap, wraps each with a `HiResTileLayer`, and swaps them in-place in their parent collection (preserving index, opacity, visibility, title, and scale ranges).
+
+The hook searches across `map.layers`, `basemap.baseLayers`, `basemap.referenceLayers`, and nested `GroupLayer` collections to find every raster tile layer regardless of where it lives in the map hierarchy.
+
+A `ENABLE_HIRES_TILES` flag at the top of the hook disables the feature globally if needed.
+
+## Why this matters for AI vision
+
+SAGE captures map screenshots and sends them to Claude for spatial reasoning — identifying features, reading labels, understanding context. The `takeScreenshot` API can render vector layers (roads, labels, boundaries) at any resolution because they re-rasterize on the fly. But raster tile layers — aerial imagery, hillshade basemaps — are locked to their fetch resolution.
+
+With supersampling, a screenshot captured at 2184px width contains aerial imagery at the detail level of one zoom step closer. Building outlines are crisper. Solar panels become countable. Tree canopy edges resolve. For an AI model trying to describe what it sees at a property, this is the difference between "there appears to be a structure" and "there is a single-story building with a hip roof and rooftop solar array."
+
+## Performance cost
+
+| Metric | Standard | Supersampled |
+|--------|----------|--------------|
+| HTTP requests per tile | 1 | 4 |
+| Bytes per tile (approx) | ~25 KB | ~100 KB (4 × 25 KB) |
+| Canvas compositing | — | &lt;1ms per tile |
+| Perceived latency | Baseline | Modest increase with HTTP/2 multiplexing |
+
+The 4× request multiplier sounds expensive, but in practice:
+- ArcGIS tile servers support HTTP/2, so the 4 child requests multiplex over a single connection
+- Total bytes transferred equals what you'd get by zooming in one level — same pixel data, just composited differently
+- `AbortSignal` propagation ensures rapid pan/zoom cancels obsolete tile fetches before they complete
+- Canvas compositing is sub-millisecond
+
+The real cost is network bandwidth, not compute. On a fast connection the difference is barely perceptible. On a slow connection it's noticeable — which is why the feature flag exists.
+
+## Error handling
+
+| Scenario | Behavior |
+|----------|----------|
+| Child tile 404 (edge of coverage) | That quadrant transparent, other 3 render normally |
+| Already at source max LOD | Passthrough to single tile — no 404 cascade |
+| Source layer missing `tileInfo` or `url` | Skipped during hook apply, warning logged |
+| Rapid pan/zoom | AbortSignal cancels in-flight requests, ESRI discards stale tiles |
+| All 4 child tiles fail | Empty canvas returned, ESRI retries on next render cycle |
