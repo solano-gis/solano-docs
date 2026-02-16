@@ -1,0 +1,124 @@
+---
+title: "Capabilities"
+description: "Everything SAGE can do — organized by what users ask, not how the code works"
+---
+
+SAGE has 65 tools across three services, 10 knowledge domains, and a shared interactive map. This page catalogs what the AI can actually do, organized by capability rather than implementation.
+
+For how these capabilities are built, see [Architecture](/architecture). For the knowledge system behind intelligent answers, see [Knowledge Base](/knowledge).
+
+## Property & Parcels
+
+| Capability | What it does |
+|-----------|-------------|
+| Address geocoding | Convert any Solano County address to coordinates and APN |
+| Full property profile | Assessment values, building details (beds/baths/sqft/year built), Williamson Act status, use codes, exemptions, liens |
+| Street-level parcel search | Find all parcels on a street by name (e.g., all properties on Texas St in Fairfield) |
+| Criteria-based parcel search | Filter parcels by zoning, use type, acreage range, value range, year built, pools, solar, city, Williamson Act |
+| Nearby parcels | Find all parcels within a specified radius of a parcel or point, with distance measurements |
+| Nearby amenities | Find schools, parks, fire stations, hospitals, libraries, police, transit stops, and community centers within radius |
+| Oblique aerial imagery | Sanborn 5-angle photography (N/S/E/W + nadir) at any address — see buildings from the side, not just above |
+| LiDAR elevation | Surface model (DSM), terrain model (DTM), and canopy height (CHM) at 1-foot resolution from 2023 county LiDAR |
+
+## Zoning & Land Use
+
+| Capability | What it does |
+|-----------|-------------|
+| Zoning designation | Query zoning for any location — automatically routes to the correct jurisdiction (7 incorporated cities + unincorporated county) |
+| County Code lookup | Full text of zoning and land use code chapters (19, 23, 24, 26, 26.5, 28, 30, 31) |
+| County Code search | Keyword search across all available code sections |
+| General Plan policy | Search the 2008 General Plan across 12 chapters — policies, goals, implementation programs, appendices |
+| Permitted use analysis | Combines zoning designation + county code sections to determine what's allowed on a property |
+
+## Hazards
+
+| Capability | What it does |
+|-----------|-------------|
+| FEMA flood zone | Zone designation (A, AE, X, etc.), Special Flood Hazard Area status, insurance implications |
+| CAL FIRE hazard zone | Fire Hazard Severity Zone classification (Moderate / High / Very High), State vs Local Responsibility Area |
+| Earthquake fault zones | Alquist-Priolo fault zone proximity via spatial layer query |
+| Multi-hazard assessment | Chains flood + fire + seismic lookups into a single combined hazard profile for any property |
+
+## Government & Budget
+
+| Capability | What it does |
+|-----------|-------------|
+| Budget search | Full-text search of the FY2025-26 Recommended Budget ($1.65B) by department, keyword, or section |
+| Department budgets | Complete budget detail for any county department — revenue, expenditures, fund sources |
+| Org chart navigation | Browse 3,285 FTE across all departments, divisions, and positions |
+| Position search | Find any job title or classification across all departments county-wide |
+| Department comparison | Side-by-side staffing metrics between multiple departments |
+| Meeting minutes | Search Board of Supervisors and ReGIS committee meeting minutes, agendas, votes, resolutions, and action items |
+| Supervisor district | Identify which Board of Supervisors district (1-5) a location falls in, with supervisor contact info |
+| Special districts | Identify all overlapping special districts at a point — fire, water, school, garbage, cemetery, GSA, reclamation |
+
+## Maps & Visualization
+
+| Capability | What it does |
+|-----------|-------------|
+| Static map images | Server-rendered map snapshots embedded inline in chat responses |
+| Interactive map canvas | Live ArcGIS map shared between the AI and user via iframe — both see the same state |
+| Map navigation | AI pans, zooms, and navigates to coordinates, addresses, or parcels |
+| Layer toggling | AI shows or hides any layer — parcels, zoning, aerials, hazards, boundaries, and more |
+| Parcel highlighting | Highlight specific parcels by APN on the interactive map with yellow outlines |
+| Feature highlighting | Highlight features by attribute expression (e.g., all parcels zoned A-40, all Very High fire hazard zones) |
+| Map vision | AI sees what the user sees — every map command returns a screenshot the AI analyzes before responding |
+| Object detection | Vision model (Gemini Flash) locates objects in map screenshots (buildings, pools, solar panels, aircraft) and converts pixel positions to real-world coordinates |
+| Inline charts | Bar, horizontal bar, pie, donut, line, and area charts rendered inline in chat — supports currency, percent, and acres formatting |
+| AI infographics | Custom diagrams, comparison graphics, and visualizations generated via AI image generation |
+
+## Spatial Analysis
+
+| Capability | What it does |
+|-----------|-------------|
+| Feature counting | Count features in any map layer within a bounding box or the current map view |
+| Attribute sampling | Retrieve the first N features with attributes, sorted by any field (e.g., top 10 parcels by acreage) |
+| Aggregate statistics | Sum, average, min, max with GROUP BY across any queryable layer (e.g., total acreage by zoning type) |
+| Spatial chaining | Derive the bounding box of features in one layer, then use it to query another layer (e.g., find parcels within fire hazard zones) |
+| Driving directions | Turn-by-turn routes via ESRI World Route Service between any two locations |
+| Travel time | Point-to-point travel time and distance estimates |
+| Buffer analysis | Map visualization with radius overlay around a parcel or point |
+
+## GIS Data Discovery
+
+| Capability | What it does |
+|-----------|-------------|
+| Layer catalog | Browse 30+ GIS layers across 11 categories (property, zoning, hazards, districts, services, POI, infrastructure, emergency, environmental, demographics, basemap) |
+| Layer search | Keyword or natural language search to find relevant GIS layers |
+| Field inspection | View field names, types, and query patterns for any layer before writing queries |
+| Data downloads | Links to downloadable GIS datasets — Shapefile, Geodatabase, LiDAR, GeoJSON, CSV, KML |
+| Geoprocessing | Dissolve shapefiles by attribute field to create simplified boundary polygons |
+
+## Domain Knowledge
+
+SAGE loads domain expertise on demand via the [skill system](/knowledge). Each skill provides interpretation context, gotchas, and response patterns that turn raw data into useful analysis.
+
+| Skill | What it provides |
+|-------|-----------------|
+| property-research | Prop 13 value interpretation, parcel field semantics, address jurisdiction nuances |
+| zoning-land-use | Jurisdiction routing rules, ADU regulations, subdivision requirements, county code chapter guide |
+| hazards-environment | Flood/fire/seismic interpretation, defensible space requirements, building code implications |
+| budget-staffing | Budget structure navigation, staffing analysis patterns, department comparison strategies |
+| county-overview | Geography, demographics, economy, cities, landmarks, transportation, history |
+| general-plan-policy | Policy research patterns across 12 General Plan chapters |
+| jurisdiction-services | City vs county routing, special district semantics, standard disclaimers |
+| maps-spatial | Layer discovery strategies, aerial imagery guide, map visualization patterns |
+| meetings-governance | Meeting search patterns, committee coverage, date ranges |
+| workflows | Multi-step chaining patterns — development feasibility, permit notifications, portfolio analysis |
+
+## By the numbers
+
+| Metric | Count |
+|--------|-------|
+| MCP tools (sage-gis) | 28 |
+| MCP tools (sage-gov) | 31 |
+| Local tools (sage-web server-side) | 4 |
+| Client-side tools (browser) | 2 |
+| **Total tools** | **65** |
+| Knowledge skills | 10 |
+| Queryable map layers | 30+ |
+| GIS data categories | 11 |
+
+<Note>
+All capabilities query the same public data sources that power the county's existing web applications. SAGE cannot access any data that isn't already publicly available. See [Risk & Governance](/governance) for the full data access inventory.
+</Note>
