@@ -96,6 +96,40 @@ Each tier is a separate deployment configuration of the same codebase. The archi
 
 **Key point:** SAGE runs on top of the county's existing ArcGIS investment. It doesn't replace Esri — it makes the existing infrastructure more accessible.
 
+## Accessibility
+
+### SAGE is more accessible than existing GIS tools
+
+Traditional GIS web applications require mouse-driven map interaction, visual interpretation of symbology, and click-identify workflows that are meaningless to a screen reader. SAGE's chat interface inverts this — users can perform full parcel analysis, zoning lookups, hazard assessments, and spatial queries through natural language text.
+
+A screen reader on a conventional map app says: *"Map widget, interactive content."* SAGE says: *"The parcel at 123 Oak St is a 0.4 acre lot zoned R-1 in the Suisun Valley, outside FEMA flood zones, with moderate fire hazard severity. The aerial shows mature trees covering roughly 40% of the lot."*
+
+This is not a retrofit. SAGE's architecture requires the AI to observe the same visual state the user sees, which makes natural language description a built-in capability rather than an afterthought.
+
+### How the vision feedback loop enables this
+
+Every map interaction follows a ground-truth verification cycle:
+
+1. AI sends a map command (pan, zoom, toggle layer, highlight parcel)
+2. sage-map executes the command and captures a screenshot of the result
+3. The screenshot is returned to the AI via the `command-ack` message
+4. If the screenshot doesn't arrive within 8 seconds, the AI is told the action is **unconfirmed** — it cannot assume what the map shows
+
+This means the AI always has a current, verified view of what the user sees. It never hallucinates about map state because it is not allowed to assume — it must observe. For a visually impaired user, the AI becomes a domain-expert narrator: it has the screenshot, the attribute data from tool calls, and the context from the conversation to produce descriptions far richer than any static alt text.
+
+### Compliance posture
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Chat interface | Strong | Text-in, text-out. Inherently screen reader compatible. Keyboard navigation needs audit. |
+| Map viewer (sage-map) | Esri's responsibility | Built on @arcgis/core + Calcite Design System. Covered by [Esri's published VPATs](https://www.esri.com/en-us/accessibility/conformance-reports). |
+| AI-generated images | Supplementary | Oblique photos, infographics are enhancements. Primary information delivery is text. |
+| Overall | Exceeds baseline | Chat provides a text-based alternative to visual-only GIS workflows — something existing county map apps do not offer. |
+
+<Note>
+ADA Title II requires state and local governments (population 50,000+) to meet WCAG 2.1 AA by April 24, 2026. SAGE's chat-first architecture positions it well for compliance. The map component relies on Esri's Calcite Design System, which Esri maintains for Section 508 conformance.
+</Note>
+
 ## What SAGE is not
 
 - **Not a replacement for GIS staff.** It's a tool that makes their expertise more accessible.
