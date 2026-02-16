@@ -9,25 +9,7 @@ This is what separates "here's the raw data" from "here's what this data means a
 
 ## How it works
 
-```
-sage-knowledge/                     ← canonical repo (human-editable)
-    ├── property-research/
-    │   ├── SKILL.md                ← instructions + context
-    │   └── references/             ← deep-dive reference files
-    │       ├── parcel-data-fields.md
-    │       ├── prop13-assessment.md
-    │       └── address-points.md
-    ├── hazards-environment/
-    │   ├── SKILL.md
-    │   └── references/
-    └── ... (10 domains)
-
-        ↓  bundled at build time
-
-sage-web/data/skills/               ← runtime copy
-    ├── manifest.json               ← discovery metadata
-    └── content/                    ← all SKILL.md + reference files
-```
+![Knowledge bundling — sage-knowledge repo bundled into sage-web at build time](/images/knowledge-bundling.png)
 
 At startup, sage-web reads `manifest.json` and injects an `<available_knowledge>` block into the system prompt. This costs ~750 tokens and tells the AI what domains exist. When a query matches a domain, the AI calls `load_skill()` to get the full instructions before answering.
 

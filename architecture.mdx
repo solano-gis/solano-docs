@@ -10,27 +10,7 @@ SAGE is split across four independent Vercel deployments. This isn't a microserv
 
 ## System diagram
 
-```
-                    ┌──────────────────┐
-                    │  sage-knowledge  │
-                    │  10 skill domains│
-                    │  Domain expertise│
-                    └────────┬─────────┘
-                             │ bundled at build
-                             ▼
-┌─────────────────────────────────────────────────┐
-│                   sage-web                       │
-│          Chat UI + AI Orchestration              │
-│       (Claude Opus 4.6, Vercel AI SDK)          │
-└──────┬──────────────┬──────────────┬────────────┘
-       │ MCP/HTTP     │ MCP/HTTP     │ iframe postMessage
-       ▼              ▼              ▼
-┌──────────┐  ┌──────────┐  ┌──────────────────┐
-│ sage-gov │  │ sage-gis │  │    sage-map       │
-│ 30 tools │  │ 28 tools │  │ ArcGIS Maps SDK  │
-│ Records  │  │ Spatial  │  │ Interactive map   │
-└──────────┘  └──────────┘  └──────────────────┘
-```
+![SAGE architecture — sage-knowledge feeds sage-web, which connects to sage-gov, sage-gis, and sage-map](/images/architecture-overview.png)
 
 ## Service boundaries
 

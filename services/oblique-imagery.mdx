@@ -46,26 +46,7 @@ The AI uses these naturally — "zoom in on the roof" triggers zoom 20 with nadi
 
 ## Pipeline architecture
 
-```
-                Sanborn FindFootprints API
-                        │
-                        ▼
-                ┌───────────────┐
-                │  sage-gis     │
-                │  MCP tool     │─── metadata (directions, URLs, footprints)
-                └───────┬───────┘
-                        │ self-call via production URL
-                        ▼
-                ┌───────────────┐
-                │  /api/        │
-                │  oblique-     │─── fetches COG tiles via range requests
-                │  preview      │    from services.sanborn.com
-                └───────┬───────┘
-                        │
-                        ▼
-                  JPEG crop image
-                  (base64 → inline)
-```
+![Oblique imagery pipeline — Sanborn API to sage-gis to oblique-preview to JPEG crop](/images/oblique-pipeline.png)
 
 ### Step by step
 

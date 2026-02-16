@@ -18,23 +18,7 @@ sage-web is the orchestration layer. It hosts the chat interface, manages AI con
 
 ## Request lifecycle
 
-```
-Browser (Chat.tsx)
-  ↓ user message + map state + screenshot
-/api/chat (Next.js route)
-  ↓ converts UI messages → model messages
-  ├── Injects map screenshot as image part
-  ├── Optimizes token budget (strips old images)
-  ├── Connects to MCP servers (sage-gov + sage-gis in parallel)
-  ↓
-Claude Opus 4.6 (with up to 59 tools)
-  ├── Reads user question + map screenshot
-  ├── Chains 5-8 tool calls per typical query
-  ├── Tools execute server-side (MCP) or client-side (map commands)
-  ↓
-Response streams back to browser
-  └── ToolResult.tsx renders maps, data, tool results
-```
+![sage-web request flow — Browser to /api/chat to Claude to response](/images/sage-web-request-flow.png)
 
 ## Dynamic tool loading
 
