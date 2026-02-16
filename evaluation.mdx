@@ -75,13 +75,14 @@ Grounding goals verify the AI doesn't fabricate information. The evaluator compa
 ## Current test goals
 
 <AccordionGroup>
-  <Accordion title="Accuracy (4 goals)">
+  <Accordion title="Accuracy (5 goals)">
     | Goal | What it checks | Key ground truth |
     |------|---------------|-----------------|
     | Property lookup | APN, zoning, acreage for 675 Texas St | APN 003-025-1020, PF zoning, 5.28 acres |
     | Flood zone | FEMA flood zone designation | Zone X (minimal risk) |
     | Fire hazard | Fire hazard severity zone | Non-FHSZ |
     | Different address | APN and zoning for 580 Texas St | APN 003-019-3030 |
+    | Chart rendering | Zoning breakdown by acreage → inline chart | Chart visible with labeled categories |
   </Accordion>
 
   <Accordion title="Grounding (2 goals)">
@@ -120,16 +121,16 @@ Each eval run produces a scored envelope:
   "sageModel": "google:gemini-3-flash-preview",
   "evaluatorModel": "gemini-3-flash-preview",
   "summary": {
-    "total": 13,
-    "passed": 13,
+    "total": 14,
+    "passed": 14,
     "passRate": 1.0,
-    "totalCriteria": 48,
-    "criteriaMet": 48,
+    "totalCriteria": 52,
+    "criteriaMet": 52,
     "criteriaRate": 1.0,
     "avgTurns": 1.1,
-    "avgDurationMs": 28300,
+    "avgDurationMs": 27600,
     "byCategory": {
-      "accuracy":   { "total": 4, "passed": 4, "rate": 1.0, "criteriaRate": 1.0 },
+      "accuracy":   { "total": 5, "passed": 5, "rate": 1.0, "criteriaRate": 1.0 },
       "grounding":  { "total": 2, "passed": 2, "rate": 1.0, "criteriaRate": 1.0 },
       "refusal":    { "total": 4, "passed": 4, "rate": 1.0, "criteriaRate": 1.0 },
       "resilience": { "total": 3, "passed": 3, "rate": 1.0, "criteriaRate": 1.0 }
