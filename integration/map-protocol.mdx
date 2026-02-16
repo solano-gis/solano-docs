@@ -64,7 +64,7 @@ Generalized feature selection via SQL WHERE expressions. Unlike `highlight-apns`
 - **Polyline** — orange 3px line
 - **Point** — orange circle marker, size 10, white outline
 
-The AI constructs WHERE expressions from domain knowledge (e.g., `zone_abrev = 'R-1'`, `HAZ_CLASS = 'Very High'`). sage-web resolves layer titles to FeatureServer URLs via its layer registry before sending the command. The `maxFeatures` cap (default 500) prevents runaway queries.
+The AI constructs WHERE expressions from domain knowledge (e.g., `zone_abrev = 'R-1'`, `HAZ_CLASS = 'Very High'`). sage-web resolves layer titles to FeatureServer URLs via its layer registry before sending the command. The `maxFeatures` cap (default 5,000) prevents runaway queries. The query uses `maxRecordCountFactor: 5` to override the typical ArcGIS REST `maxRecordCount` limit (often 1,000–2,000).
 
 ## Command lifecycle
 
@@ -99,6 +99,21 @@ The system prompt instructs the AI to never describe map contents when `ackStatu
 
 - `applied: true` — command completed as intended
 - `applied: false` — no-op, blocked, or failed (with `details.reason`)
+
+### Highlight ack details
+
+When `highlight-features` completes, the `command-ack` includes extra metadata in `details`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `featureCount` | `number` | Features actually highlighted |
+| `exceededLimit` | `boolean` | `true` if the query hit the feature cap (more matching features exist) |
+| `fieldNames` | `string[]` | Attribute field names from the highlighted features |
+| `layerTitle` | `string` | Layer that was queried |
+| `where` | `string` | SQL WHERE expression used |
+| `geometryType` | `string` | `polygon`, `polyline`, `point`, or `unknown` |
+
+sage-web surfaces `featureCount`, `exceededLimit`, `fieldNames`, `layerTitle`, and `where` in the tool output. This gives the AI enough metadata to decide whether a follow-up `query_map_features` call (stats, sample) would add value — without auto-sending potentially large attribute payloads.
 
 ## Screenshot pipeline
 
@@ -142,7 +157,9 @@ HighlightInfo {
   url: string
   where: string
   featureCount: number
+  exceededLimit: boolean
   geometryType: 'polygon' | 'polyline' | 'point' | 'unknown'
+  fieldNames: string[]
 }
 ```
 

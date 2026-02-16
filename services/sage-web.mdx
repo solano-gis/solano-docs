@@ -126,3 +126,21 @@ Tools execute in three different places:
 ### Ack-before-output
 
 `update_map` waits up to 8 seconds for the iframe's `command-ack` before calling `addToolOutput`. The tool output includes an `ackStatus` field (`confirmed`, `unconfirmed`, or `failed`) so the AI knows whether it can trust the map state. This prevents hallucinated map descriptions when the iframe bridge is broken. See [Map Protocol](/integration/map-protocol) for details.
+
+### Highlight metadata in tool output
+
+For `highlight_features` calls, the tool output includes metadata from the ack:
+
+```json
+{
+  "message": "Highlighted and zoomed to Parcels where valtv > 200000 (234 features)",
+  "ackStatus": "confirmed",
+  "featureCount": 234,
+  "exceededLimit": false,
+  "fieldNames": ["OBJECTID", "parcelid", "Acres", "valland", "valimps", "valtv", "usecdesc"],
+  "layerTitle": "Parcels",
+  "where": "valtv > 200000"
+}
+```
+
+This gives the AI the breadcrumbs to run follow-up queries on the same selection using `query_map_features` — e.g., `stats` mode for value distributions or `sample` mode for top-N lists — without auto-sending attribute data that could swamp the context window. The AI decides whether a follow-up is worth the tokens based on the user's question.

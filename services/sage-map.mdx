@@ -33,9 +33,13 @@ Four pre-configured ArcGIS Online web maps, switchable on demand:
 Two highlight commands enable the AI to visually mark features on the shared map:
 
 - **`highlight-apns`** — Highlights specific parcels by APN. Orange polygon outlines, zooms to fit.
-- **`highlight-features`** — Highlights any queryable FeatureServer layer by SQL WHERE expression. Geometry-adaptive symbols: orange polygon outlines, orange polylines, or orange circle markers depending on feature type. Capped at 500 features per query.
+- **`highlight-features`** — Highlights any queryable FeatureServer layer by SQL WHERE expression. Geometry-adaptive symbols: orange polygon outlines, orange polylines, or orange circle markers depending on feature type. Capped at 5,000 features per query (`maxRecordCountFactor: 5` overrides server-side `maxRecordCount` limits).
 
-Examples: `where: "zone_abrev = 'R-1'"` highlights all R-1 zoning districts; `where: "HAZ_CLASS = 'Very High'"` highlights severe fire hazard zones.
+Both commands auto-zoom to fit the highlighted features using extent-based zoom with 1.5× padding (capped at zoom level 18 for small features).
+
+The `highlight-features` ack includes metadata: `featureCount`, `exceededLimit`, `fieldNames`, `layerTitle`, `where`, and `geometryType`. sage-web surfaces this in the tool output so the AI can decide whether to run follow-up attribute queries. Feature attributes are already loaded on each graphic (via `outFields: ['*']`) but are not sent to the AI automatically — the AI controls when to request data via `query_map_features`.
+
+Examples: `where: "zone_abrev = 'R-1'"` highlights all R-1 zoning districts; `where: "valland > 500000"` highlights high-value parcels.
 
 ### Parcel interaction
 
