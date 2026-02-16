@@ -1,0 +1,126 @@
+---
+title: "Data Visualization"
+description: "Inline Recharts-powered bar, pie, line, and area charts rendered client-side from AI-prepared data — no round-trip required"
+---
+
+SAGE can render inline data visualizations directly in the chat when query results have a numeric dimension. Budget breakdowns become bar charts, zoning distributions become donut charts, staffing comparisons become horizontal bars. The AI retrieves the data, aggregates it, and calls `render_chart` to produce an SVG chart that appears inline alongside the response.
+
+The feature follows the same client-side tool pattern as `update_map` — the AI SDK streams a tool call with no server execute function, and the React component intercepts it in the browser.
+
+## What it looks like
+
+<Frame caption="A donut chart showing the top 20 largest parcels in Solano County by land use, with a data table below. The AI queried map features, aggregated acreage by use type, and called render_chart to produce the visualization.">
+  ![Donut chart showing land use breakdown by total acres](/images/chart-donut-land-use.png)
+</Frame>
+
+The AI's response combines the chart with a narrative summary and a supporting data table — the chart tells the shape of the data at a glance, while the table provides exact values.
+
+## How it works
+
+```
+User: "Show me the land use breakdown for the largest parcels"
+
+1. AI calls query_map_features(layer: "Parcels", mode: "stats", group_by: "use_desc")
+2. MCP server queries ArcGIS, returns grouped acreage totals
+3. AI aggregates results into 3-15 categories, combines small slices into "Other"
+4. AI calls render_chart({
+     chart_type: "donut",
+     title: "Top 20 Largest Parcels by Land Use (Total Acres)",
+     data: [{ label: "Governmental/Misc", value: 11664.27 }, ...],
+     format: "acres"
+   })
+5. ToolResult.tsx intercepts the tool call (no server round-trip)
+6. Lazy-loaded Recharts component renders inline SVG
+7. AI continues with narrative insight about the chart
+```
+
+The tool call has no `execute` function on the server. The AI SDK streams it to the client in `input-available` state. `ToolResult.tsx` catches it, calls `addToolOutput()` with the chart data, and renders the `<Chart>` component inside a `<Suspense>` boundary. The entire render path is client-side — no additional API calls.
+
+## Chart types
+
+| `chart_type` | Recharts component | Best for |
+|---|---|---|
+| `bar` | `<BarChart>` | Category comparisons — department budgets, parcel values by zone |
+| `horizontal_bar` | `<BarChart layout="vertical">` | Ranked lists — top 10 departments by FTE, largest parcels |
+| `pie` | `<PieChart>` | Parts of a whole — zoning distribution, land use breakdown |
+| `donut` | `<PieChart innerRadius={60}>` | Same as pie with a hollow center — cleaner for 5+ categories |
+| `line` | `<LineChart>` | Trends over time — budget by fiscal year |
+| `area` | `<AreaChart>` | Cumulative or volume trends — revenue over time |
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `chart_type` | enum | yes | One of: `bar`, `horizontal_bar`, `pie`, `donut`, `line`, `area` |
+| `title` | string | yes | Chart title displayed above the visualization |
+| `data` | array | yes | 2-30 objects with `label` (string), `value` (number), optional `value2` (number) |
+| `format` | enum | no | Value display format: `number`, `currency`, `percent`, `acres` |
+| `x_label` | string | no | X-axis label (bar/line/area charts) |
+| `y_label` | string | no | Y-axis label (bar/line/area charts) |
+| `value_label` | string | no | Legend label for the primary series (used when `value2` is present) |
+| `value2_label` | string | no | Legend label for the secondary series |
+| `color_scheme` | enum | no | Color palette: `default`, `categorical`, `sequential`, `diverging` |
+
+### Value formatting
+
+The `format` parameter controls how numbers appear on axes, tooltips, and pie labels:
+
+| Format | Example output | When to use |
+|--------|---------------|-------------|
+| `currency` | `$1.2M`, `$12.5K`, `$1,234` | Budget, assessed values, revenue |
+| `percent` | `45%` | Zoning share, land use distribution |
+| `acres` | `1,234 ac` | Parcel acreage, area calculations |
+| `number` | `1,234` | FTE counts, parcel counts, generic numeric |
+
+### Dual-value series
+
+When `value2` is present in data points, the chart renders two series with a legend. This enables side-by-side comparisons — budget vs. actual, current year vs. prior year, assessed land vs. improvement value.
+
+## Implementation
+
+### Client-side tool pattern
+
+`render_chart` uses the same architecture as `update_map`:
+
+1. **Schema only in route.ts** — Zod schema defines the input shape. No `execute` function.
+2. **CLIENT_SIDE_TOOLS set** — `ToolResult.tsx` checks membership to route the tool call to client-side handling instead of waiting for a server response.
+3. **addToolOutput()** — After processing, the component calls back to the AI SDK with the result, which triggers auto-send so the AI can describe what it rendered.
+
+The key difference from `update_map`: no iframe involvement, no screenshot capture, no ack/nack flow. The `render_chart` handler returns immediately after calling `addToolOutput()`.
+
+### Lazy loading
+
+The Recharts library (~50KB gzipped) is lazy-loaded via `React.lazy()`:
+
+```tsx
+const Chart = lazy(() => import('@/components/Chart'));
+```
+
+This means zero impact on the initial chat bundle. The library loads on first chart render, with a `<Suspense>` fallback showing a violet spinner.
+
+### Dark mode
+
+The chart reads the current theme via `useTheme()` and adjusts axis colors, grid lines, and tooltip backgrounds. The 8-color categorical palette was chosen for readability on both light and dark backgrounds.
+
+### Token budget
+
+The tool schema adds ~200 tokens to each request. The system prompt guidance is a single line (~50 tokens). Total impact: ~250 tokens per request — well within the 35K character budget.
+
+## When the AI charts vs. doesn't
+
+The system prompt guides the AI to use `render_chart` when:
+
+- Query results have **3+ categories** with numeric values
+- The data represents **parts of a whole** (zoning breakdown, budget allocation)
+- The user asks for a **comparison** (department budgets, parcel values)
+- Results show a **trend** over time
+
+The AI skips charting for single-value lookups, yes/no questions, or when the user is clearly asking for raw data. It aggregates before charting — combining small categories into "Other" to keep charts readable at 3-15 items.
+
+## Limitations
+
+- **SVG rendering** — Charts are SVG-based, which means they're resolution-independent but can get heavy with 30 data points and long labels. The schema caps data at 30 items.
+- **No interactivity** — Charts are static inline renders. No drill-down, no click-to-filter. The user can ask follow-up questions instead.
+- **No export** — Charts can't be saved as images or PDFs. Users can screenshot the browser window.
+- **Color only** — No pattern fills for accessibility. The 8-color palette has reasonable contrast but isn't optimized for color vision deficiency.
+- **Client-side only** — Charts don't appear in the production interaction logs (Vercel Blob). The log records the tool call and data, but not the rendered visualization.

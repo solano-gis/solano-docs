@@ -52,7 +52,8 @@
               "services/oblique-imagery",
               "services/lidar-elevation",
               "services/county-code",
-              "services/hires-tiles"
+              "services/hires-tiles",
+              "services/data-visualization"
             ]
           }
         ]
