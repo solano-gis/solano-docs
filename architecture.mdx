@@ -63,7 +63,7 @@ SAGE is split across four independent Vercel deployments. This isn't a microserv
 ```
 1. User types "Tell me about 123 Main St, Fairfield"
 2. sage-web captures map screenshot + map state (center, zoom, layers)
-3. sage-web sends message + screenshot to Claude Opus 4.6
+3. sage-web sends message + screenshot to the AI model
 4. Claude decides to call geocode_address → get_parcel_details → get_zoning → get_flood_zone → show_map
 5. Each tool call → MCP HTTP request to sage-gis
 6. sage-gis queries ArcGIS REST → returns structured data
@@ -99,6 +99,10 @@ Beyond parcel highlights, `update_map` supports **feature highlighting by WHERE 
 | **Access control** | One permission model | Each service can have different auth |
 | **Compliance** | Hard to audit | Each service has a clear data inventory |
 | **Scaling** | Scale everything or nothing | Scale hot services independently |
+
+### Application as code
+
+SAGE's behavior, domain knowledge, and policy guardrails are all expressed as readable text — system prompts, skill files, tool definitions — not compiled into opaque application logic. Adding a data source means writing an MCP tool. Changing what the AI knows about zoning means editing a markdown file in sage-knowledge. Restricting behavior for a new deployment tier means adjusting a config value. The gap between understanding the domain and modifying the application is nearly zero, which means the system gets smarter as the team's knowledge grows — without vendor engagements or development cycles.
 
 ## Observability
 
