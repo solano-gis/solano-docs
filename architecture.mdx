@@ -100,6 +100,56 @@ Beyond parcel highlights, `update_map` supports **feature highlighting by WHERE 
 | **Compliance** | Hard to audit | Each service has a clear data inventory |
 | **Scaling** | Scale everything or nothing | Scale hot services independently |
 
+## Observability
+
+Every sage-web interaction is instrumented end-to-end and persisted to Vercel Blob storage. This gives full visibility into what happened during any conversation — tool chains, timing, token usage, errors, and the AI's final response.
+
+### What gets logged
+
+Each interaction produces a single JSON record containing timestamped events:
+
+| Event | When | Key data |
+|-------|------|----------|
+| `request` | API entry | Message count, model, map state, user message text |
+| `mcp.connect` | MCP ready | Tool count, connection time |
+| `step` | Each AI step | Tool calls (name + args), tool results, token usage |
+| `screenshot.inject` | Screenshot → AI | Mode, media type, size |
+| `stream.finish` | Response done | Duration, total steps, all tool calls, full usage breakdown, AI response text |
+| `error` | Any failure | Error message, phase (pre-stream or stream) |
+
+### How it works
+
+```
+User sends message
+  → InteractionCollector created with UUID
+  → Each lifecycle event logged via prodLog() → console.log + collector buffer
+  → On completion: collector.flush() writes full record to Vercel Blob
+  → Response includes X-Sage-Interaction-Id header for correlation
+```
+
+Records are stored at `interactions/{YYYY-MM-DD}/{uuid}.json` in Vercel Blob. An authenticated API endpoint (`/api/logs`) provides list, detail, search, and purge operations. A CLI script (`scripts/sage-logs.sh`) wraps the API for terminal use.
+
+### Querying interactions
+
+```bash
+# CLI (from sage-web repo root)
+./scripts/sage-logs.sh                     # list today's interactions
+./scripts/sage-logs.sh --latest            # most recent interaction detail
+./scripts/sage-logs.sh --summary           # one-line-per-interaction table
+./scripts/sage-logs.sh --id <uuid>         # full record with events
+./scripts/sage-logs.sh --search "error"    # full-text search
+```
+
+The API is also queryable programmatically via `GET /api/logs?date=YYYY-MM-DD&id=<uuid>` with Bearer token auth — independent of Vercel deployment protection.
+
+### Design decisions
+
+- **Dual output**: `prodLog()` writes to both console.log (Vercel runtime logs for real-time tailing) and the collector (Blob persistence for historical queries)
+- **Full verbosity**: Tool args, tool results, AI response — all captured. This is an internal county app, not public SaaS. Vercel logs are behind auth.
+- **Size management**: String values capped at 4KB, base64 data stripped, to prevent oversized records
+- **Fire-and-forget persistence**: Blob write failure doesn't break the response — it logs to console and moves on
+- **No external deps**: Uses `@vercel/blob` (already in the Vercel ecosystem) and `crypto.randomUUID()` (built-in)
+
 ## Deployment
 
 All four services deploy to Vercel via GitHub push-to-deploy:

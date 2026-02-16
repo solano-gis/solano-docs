@@ -91,6 +91,10 @@ After 1-2 tool calls with map screenshots, context can approach the 200K limit. 
 | `components/ToolResult.tsx` | Tool call rendering + client-side map commands |
 | `hooks/useMapPostMessage.ts` | iframe communication, screenshot validation |
 | `hooks/useMapPanel.ts` | Map panel state, command queue |
+| `lib/interaction-store.ts` | Interaction logging — Blob persistence, list/get/purge |
+| `lib/server-logger.ts` | `prodLog()` — structured JSON events to console + collector |
+| `app/api/logs/route.ts` | Authenticated REST endpoint for querying interaction logs |
+| `scripts/sage-logs.sh` | CLI tool for querying production interaction logs |
 
 ## Tool execution model
 
