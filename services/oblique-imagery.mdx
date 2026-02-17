@@ -3,7 +3,7 @@ title: "Oblique Imagery"
 description: "Angled aerial photography from Sanborn surveys — how SAGE serves high-res crops from 50MB Cloud Optimized GeoTIFFs"
 ---
 
-SAGE provides oblique (angled) aerial imagery for any location in Solano County. Unlike standard nadir (top-down) aerials, oblique views show building facades, roof details, and terrain from an angle — useful for property assessment, damage inspection, and understanding 3D context.
+Oblique (angled) aerial imagery is available for any location in Solano County. Unlike standard nadir (top-down) aerials, oblique views show building facades, roof details, and terrain from an angle — useful for property assessment, damage inspection, and 3D context.
 
 **Data provider:** Sanborn aerial surveys (2022-2024), 5-camera system capturing N/S/E/W obliques + nadir per flight line.
 
@@ -42,7 +42,7 @@ The `zoom` parameter maps ArcGIS-style zoom levels to COG pyramid levels. Higher
 | 16 | 3 (1:8) | ~20" GSD | Quarter mile | Area overview |
 | 15 | 4 (1:16) | ~40" GSD | Half mile+ | Wide area, downtown context |
 
-The AI uses these naturally — "zoom in on the roof" triggers zoom 20 with nadir direction, "show me the neighborhood" triggers zoom 16.
+The AI maps natural language to zoom levels — "zoom in on the roof" triggers zoom 20 with nadir direction, "show me the neighborhood" triggers zoom 16.
 
 ## Pipeline architecture
 

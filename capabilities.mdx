@@ -3,23 +3,23 @@ title: "Capabilities"
 description: "Everything SAGE can do — organized by what users ask, not how the code works"
 ---
 
-SAGE has 70 tools across three services, 10 knowledge domains, and a shared interactive map. This page catalogs what the AI can actually do, organized by capability rather than implementation.
+SAGE has 70 tools across three services, 10 knowledge domains, and a shared interactive map. This page catalogs what the AI can do, organized by capability rather than implementation.
 
-For how these capabilities are built, see [Architecture](/architecture). For the knowledge system behind intelligent answers, see [Knowledge Base](/knowledge).
+For how these capabilities are built, see [Architecture](/architecture). For the knowledge system, see [Knowledge Base](/knowledge).
 
 ## Property & Parcels
 
 | Capability | What it does |
 |-----------|-------------|
 | Address geocoding | Convert any Solano County address to coordinates and APN |
-| Full property profile | Assessment values, building details (beds/baths/sqft/year built), Williamson Act status, use codes, exemptions, liens |
+| Property profile | Assessment values, building details (beds/baths/sqft/year built), Williamson Act status, use codes, exemptions, liens |
 | Street-level parcel search | Find all parcels on a street by name (e.g., all properties on Texas St in Fairfield) |
 | Criteria-based parcel search | Filter parcels by zoning, use type, acreage range, value range, year built, pools, solar, city, Williamson Act |
 | Nearby parcels | Find all parcels within a specified radius of a parcel or point, with distance measurements |
 | Nearby amenities | Find schools, parks, fire stations, hospitals, libraries, police, transit stops, and community centers within radius |
 | Oblique aerial imagery | Sanborn 5-angle photography (N/S/E/W + nadir) at any address — see buildings from the side, not just above |
 | LiDAR elevation | Surface model (DSM), terrain model (DTM), and canopy height (CHM) at 1-foot resolution from 2023 county LiDAR |
-| Terrain analysis | Slope (degrees, percent, classification), aspect (compass direction), and full elevation detail at any point — uses Horn's method on a 3×3 LiDAR grid at 1ft resolution |
+| Terrain analysis | Slope (degrees, percent, classification), aspect (compass direction), and elevation detail at any point — Horn's method on a 3×3 LiDAR grid at 1ft resolution |
 
 ## Zoning & Land Use
 
@@ -38,7 +38,7 @@ For how these capabilities are built, see [Architecture](/architecture). For the
 | FEMA flood zone | Zone designation (A, AE, X, etc.), Special Flood Hazard Area status, insurance implications |
 | CAL FIRE hazard zone | Fire Hazard Severity Zone classification (Moderate / High / Very High), State vs Local Responsibility Area |
 | Earthquake fault zones | Alquist-Priolo fault zone proximity via spatial layer query |
-| Multi-hazard assessment | Chains flood + fire + seismic lookups into a single combined hazard profile for any property |
+| Multi-hazard assessment | Chains flood + fire + seismic lookups into a combined hazard profile for any property |
 
 ## Government & Budget
 
@@ -58,16 +58,16 @@ For how these capabilities are built, see [Architecture](/architecture). For the
 | Capability | What it does |
 |-----------|-------------|
 | Static map images | Server-rendered map snapshots embedded inline in chat responses |
-| Interactive map canvas | Live ArcGIS map shared between the AI and user via iframe — both see the same state |
+| Interactive map canvas | Live ArcGIS map shared between AI and user via iframe — both see the same state |
 | Map navigation | AI pans, zooms, and navigates to coordinates, addresses, or parcels |
 | Layer toggling | AI shows or hides any layer — parcels, zoning, aerials, hazards, boundaries, and more |
 | Parcel highlighting | Highlight specific parcels by APN on the interactive map with yellow outlines |
 | Feature highlighting | Highlight features by attribute expression (e.g., all parcels zoned A-40, all Very High fire hazard zones) |
-| Map legend/symbology | AI reads layer renderer data (field, values, labels, colors) to accurately describe what map colors represent — no guessing |
-| Map vision | AI sees what the user sees — every map command returns a screenshot the AI analyzes before responding |
+| Map legend/symbology | AI reads layer renderer data (field, values, labels, colors) to describe what map colors represent |
+| Map vision | Every map command returns a screenshot the AI analyzes before responding |
 | Object detection | Vision model (Gemini Flash) locates objects in map screenshots (buildings, pools, solar panels, aircraft) and converts pixel positions to real-world coordinates |
 | Inline charts | Bar, horizontal bar, pie, donut, line, and area charts rendered inline in chat — supports currency, percent, and acres formatting |
-| AI infographics | Custom diagrams, comparison graphics, and visualizations generated via AI image generation |
+| AI infographics | Diagrams, comparison graphics, and visualizations generated via AI image generation |
 
 ## Spatial Analysis
 
@@ -76,15 +76,15 @@ For how these capabilities are built, see [Architecture](/architecture). For the
 | Feature counting | Count features in any map layer within a bounding box or the current map view |
 | Attribute sampling | Retrieve the first N features with attributes, sorted by any field (e.g., top 10 parcels by acreage) |
 | Aggregate statistics | Sum, average, min, max with GROUP BY across any queryable layer (e.g., total acreage by zoning type) |
-| Polygon spatial filter | Use the actual polygon geometry of features in one layer to filter another — e.g., count parcels inside a specific FEMA flood zone polygon, not just its bounding box |
-| Spatial relationships | Query with `intersects`, `contains`, `within`, `touches`, or `crosses` — supports precise adjacency and containment questions |
+| Polygon spatial filter | Use polygon geometry from one layer to filter another — e.g., count parcels inside a specific FEMA flood zone polygon, not just its bounding box |
+| Spatial relationships | Query with `intersects`, `contains`, `within`, `touches`, or `crosses` for adjacency and containment questions |
 | Driving directions | Turn-by-turn routes via ESRI World Route Service between any two locations |
 | Travel time | Point-to-point travel time and distance estimates |
-| Buffer analysis | Precise buffer polygons around parcels or points via ESRI Geometry Service — buffer extends from the actual parcel boundary, not just the centroid. Uses CA State Plane Zone 2 (US survey feet) for accurate distances. |
-| Notification lists | Chain buffer → spatial query to find all parcels within a radius of a property — the core workflow for CEQA/permit notification requirements |
-| Point-in-polygon query | Query any registered map layer at a point location — general plan designation, garbage service area, subdivisions, wildlife hazard zones, demographics, and more |
-| Cross-layer overlay analysis | Compute the geometric intersection of two layers and calculate overlap areas — answers "how many acres of A-40 zoned land are in the AE flood zone?" using ESRI Geometry Service batch intersect with geodesic area calculation |
-| Polygon union | Merge multiple parcels or polygon features into a single combined boundary — accepts APNs or raw geometries, returns the union polygon with area in acres. Use for project site assembly or multi-parcel analysis. |
+| Buffer analysis | Buffer polygons around parcels or points via ESRI Geometry Service — extends from the parcel boundary, not the centroid. CA State Plane Zone 2 (US survey feet). |
+| Notification lists | Buffer → spatial query to find all parcels within a radius — the workflow for CEQA/permit notification requirements |
+| Point-in-polygon query | Query any registered map layer at a point — general plan designation, garbage service area, subdivisions, wildlife hazard zones, demographics |
+| Cross-layer overlay | Geometric intersection of two layers with overlap area calculation — answers "how many acres of A-40 zoned land are in the AE flood zone?" |
+| Polygon union | Merge multiple parcels or polygon features into a single combined boundary — for project site assembly or multi-parcel analysis |
 
 ## GIS Data Discovery
 
@@ -92,13 +92,13 @@ For how these capabilities are built, see [Architecture](/architecture). For the
 |-----------|-------------|
 | Layer catalog | Browse 30+ GIS layers across 11 categories (property, zoning, hazards, districts, services, POI, infrastructure, emergency, environmental, demographics, basemap) |
 | Layer search | Keyword or natural language search to find relevant GIS layers |
-| Field inspection | View field names, types, and query patterns for any layer before writing queries |
+| Field inspection | View field names, types, and query patterns for any layer |
 | Data downloads | Links to downloadable GIS datasets — Shapefile, Geodatabase, LiDAR, GeoJSON, CSV, KML |
-| Geoprocessing | Dissolve shapefiles by attribute field to create simplified boundary polygons |
+| Geoprocessing | Dissolve shapefiles by attribute field to create boundary polygons |
 
 ## Domain Knowledge
 
-SAGE loads domain expertise on demand via the [skill system](/knowledge). Each skill provides interpretation context, gotchas, and response patterns that turn raw data into useful analysis.
+SAGE loads domain expertise on demand via the [skill system](/knowledge). Each skill provides interpretation context, gotchas, and response patterns.
 
 | Skill | What it provides |
 |-------|-----------------|
@@ -108,10 +108,10 @@ SAGE loads domain expertise on demand via the [skill system](/knowledge). Each s
 | budget-staffing | Budget structure navigation, staffing analysis patterns, department comparison strategies |
 | county-overview | Geography, demographics, economy, cities, landmarks, transportation, history |
 | general-plan-policy | Policy research patterns across 12 General Plan chapters |
-| jurisdiction-services | City vs county routing, special district semantics, standard disclaimers |
+| jurisdiction-services | City vs county routing, special district semantics, disclaimers |
 | maps-spatial | Layer discovery strategies, aerial imagery guide, map visualization patterns |
 | meetings-governance | Meeting search patterns, committee coverage, date ranges |
-| workflows | Multi-step chaining patterns — development feasibility, permit notifications, portfolio analysis |
+| workflows | Multi-step chaining — development feasibility, permit notifications, portfolio analysis |
 
 ## By the numbers
 

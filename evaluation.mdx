@@ -1,9 +1,9 @@
 ---
 title: "Testing & Evaluation"
-description: "How SAGE's accuracy, grounding, and safety are measured — not just asserted"
+description: "How SAGE's accuracy, grounding, and safety are measured"
 ---
 
-SAGE includes an automated evaluation suite that tests the AI against real county data and scores results across four quality dimensions. This page explains what we test, how we test it, and what the numbers mean.
+SAGE includes an automated evaluation suite that tests the AI against real county data and scores results across four quality dimensions.
 
 ## Why this matters
 
@@ -14,7 +14,7 @@ AI systems in government can't rely on "it seems to work." Decision makers need:
 - **Refusal compliance** — does the AI decline out-of-scope requests?
 - **Resilience** — does the AI handle bad input gracefully?
 
-SAGE's eval suite produces per-category pass rates against verified ground truth from county records. These aren't unit tests checking code — they're behavioral tests checking the AI's actual responses.
+SAGE's eval suite produces per-category pass rates against verified ground truth from county records. These are behavioral tests checking the AI's actual responses, not unit tests checking code.
 
 ## Evaluation architecture
 
@@ -33,10 +33,10 @@ Eval CLI (eval.ts)
   └── Output: scored envelope (JSON) with per-category metrics
 ```
 
-The evaluator agent is a separate AI (Gemini Flash) that drives the test — composing prompts, reading responses, and scoring criteria. It interacts with SAGE through a real browser session, seeing the same rendered UI a human user sees, including tool result cards, map panels, and error states.
+The evaluator agent is a separate AI (Gemini Flash) that drives the test — composing prompts, reading responses, and scoring criteria. It interacts with SAGE through a real browser session, seeing the same UI a human would.
 
 <Note>
-The evaluator is intentionally a different model than the system under test. This prevents the AI from "recognizing" its own patterns and provides independent assessment.
+The evaluator is intentionally a different model than the system under test. This prevents the AI from "recognizing" its own patterns.
 </Note>
 
 ## What we measure
@@ -66,7 +66,7 @@ Accuracy goals include known-correct values from verified county records:
 }
 ```
 
-The evaluator checks exact matches — "approximately 5.28 acres" passes, but "5.3 acres" would not. This catches subtle data drift between the AI's interpretation and the actual county record.
+The evaluator checks exact matches — "approximately 5.28 acres" passes, but "5.3 acres" would not.
 
 ### Grounding checks
 
@@ -141,7 +141,7 @@ Each eval run produces a scored envelope:
 ```
 
 This structure supports:
-- **Trend tracking** — compare `passRate` and `criteriaRate` across runs
+- **Trend tracking** — compare `passRate` across runs
 - **Category isolation** — a grounding regression doesn't hide behind strong accuracy scores
 - **Model comparison** — swap `sageModel`, re-run, compare envelopes
 - **CI integration** — non-zero exit code when any goal fails
@@ -169,7 +169,7 @@ Results are written to `test-results/eval-results.json` after each run.
 
 ## How this connects to governance
 
-The eval suite provides quantitative backing for the claims on the [Risk & Governance](/governance) page:
+The eval suite provides quantitative backing for the [Risk & Governance](/governance) page:
 
 | Governance claim | Eval evidence |
 |-----------------|---------------|
@@ -188,11 +188,7 @@ The eval suite is one of three quality layers:
 | **Eval suite** | Verify AI behavior — accuracy, grounding, refusal, resilience against ground truth | On demand / pre-release |
 | **Interaction logging** | Full production audit trail — every tool call, response, and error persisted | Every production request |
 
-Together these provide: code correctness (unit tests), behavioral correctness (eval suite), and production visibility (interaction logs).
-
 ## Roadmap
-
-The eval suite is designed to grow. Planned additions include:
 
 - **Map interaction goals** — verify the AI can navigate the interactive map, toggle layers, and describe what it sees
 - **Multi-turn research goals** — verify context is maintained across a full research session (geocode → zoning → hazards → summary)

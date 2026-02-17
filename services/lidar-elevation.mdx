@@ -1,9 +1,9 @@
 ---
 title: "LiDAR Elevation"
-description: "43.6 billion laser-measured points turned into three queryable elevation surfaces — how SAGE decodes LERC tiles at the pixel level"
+description: "43.6 billion LiDAR points turned into three queryable elevation surfaces"
 ---
 
-SAGE provides 1-foot resolution elevation data for every point in Solano County, derived from airborne LiDAR. Ask about ground level, building height, or surface elevation at any address or coordinate — the AI queries three independent models and explains what the numbers mean.
+1-foot resolution elevation data is available for every point in Solano County, derived from airborne LiDAR. Ask about ground level, building height, or surface elevation at any address or coordinate — the AI queries three independent models and explains what the numbers mean.
 
 On the interactive map, LiDAR layers render as a continuous elevation surface with a live readout that streams values under the cursor as you move.
 
@@ -19,7 +19,7 @@ The raw point cloud was classified and rasterized into three complementary surfa
 | **DTM** (Digital Terrain Model) | Bare earth only — buildings and vegetation removed | 98.2 ft | Flood analysis, grading, drainage design |
 | **CHM** (Canopy Height Model) | Height above ground (DSM − DTM) | 27.1 ft | Building height estimates, tree canopy assessment |
 
-The math is simple: **CHM = DSM − DTM**. A CHM of 0 means open ground. CHM of 15–40 ft is a typical house or residential tree. CHM over 50 ft is a tall structure or mature tree.
+**CHM = DSM − DTM**. A CHM of 0 means open ground. CHM of 15–40 ft is a typical house or residential tree. CHM over 50 ft is a tall structure or mature tree.
 
 ## What the tool does
 
@@ -34,7 +34,7 @@ User: "How tall is the building at 675 Texas St?"
 → "The building is approximately 24 feet tall (2 stories)"
 ```
 
-The AI chains elevation with other tools naturally — combining flood zone queries with DTM to check if a property sits below the Base Flood Elevation, or using CHM to estimate whether a building meets height limits in a zoning district.
+The AI chains elevation with other tools — combining flood zone queries with DTM to check if a property sits below the Base Flood Elevation, or using CHM to estimate whether a building meets height limits in a zoning district.
 
 ## Parameters
 
