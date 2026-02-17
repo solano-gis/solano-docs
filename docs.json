@@ -13,62 +13,47 @@
   },
   "favicon": "/favicon.svg",
   "navigation": {
-    "tabs": [
+    "groups": [
       {
-        "tab": "Overview",
-        "groups": [
-          {
-            "group": "Introduction",
-            "pages": [
-              "index",
-              "architecture",
-              "capabilities",
-              "knowledge"
-            ]
-          },
-          {
-            "group": "For Decision Makers",
-            "pages": [
-              "governance",
-              "evaluation"
-            ]
-          }
+        "group": "Introduction",
+        "pages": [
+          "index",
+          "architecture",
+          "capabilities"
         ]
       },
       {
-        "tab": "Services",
-        "groups": [
-          {
-            "group": "Platform Services",
-            "pages": [
-              "services/sage-web",
-              "services/sage-gis",
-              "services/sage-gov",
-              "services/sage-map"
-            ]
-          },
-          {
-            "group": "Feature Deep Dives",
-            "pages": [
-              "services/oblique-imagery",
-              "services/lidar-elevation",
-              "services/county-code",
-              "services/hires-tiles",
-              "services/data-visualization"
-            ]
-          }
+        "group": "Services",
+        "pages": [
+          "services/sage-web",
+          "services/sage-gis",
+          "services/sage-gov",
+          "services/sage-map"
         ]
       },
       {
-        "tab": "Integration",
-        "groups": [
-          {
-            "group": "Protocols",
-            "pages": [
-              "integration/mcp",
-              "integration/map-protocol"
-            ]
-          }
+        "group": "Features",
+        "pages": [
+          "knowledge",
+          "services/oblique-imagery",
+          "services/lidar-elevation",
+          "services/county-code",
+          "services/data-visualization",
+          "services/hires-tiles"
+        ]
+      },
+      {
+        "group": "Integration",
+        "pages": [
+          "integration/mcp",
+          "integration/map-protocol"
+        ]
+      },
+      {
+        "group": "Governance",
+        "pages": [
+          "governance",
+          "evaluation"
         ]
       }
     ],
