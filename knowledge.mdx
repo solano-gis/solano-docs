@@ -3,19 +3,19 @@ title: "Knowledge Base"
 description: "How SAGE loads domain knowledge — the skill system behind intelligent answers"
 ---
 
-SAGE's responses are driven by more than tool calls. Before answering a specialized question, the AI loads **domain knowledge** — curated instructions, gotchas, response patterns, and reference material maintained in a dedicated repository.
+SAGE's responses are driven by more than tool calls. Before answering a specialized question, the AI loads **domain knowledge** — instructions, gotchas, response patterns, and reference material maintained in a dedicated repository.
 
-This is what separates "here's the raw data" from "here's what this data means and what you should do next."
+This is the difference between "here's the raw data" and "here's what this data means."
 
 ## How it works
 
 ![Knowledge bundling — sage-knowledge repo bundled into sage-web at build time](/images/knowledge-bundling.png)
 
-At startup, sage-web reads `manifest.json` and injects an `<available_knowledge>` block into the system prompt. This costs ~750 tokens and tells the AI what domains exist. When a query matches a domain, the AI calls `load_skill()` to get the full instructions before answering.
+At startup, sage-web reads `manifest.json` and injects an `<available_knowledge>` block into the system prompt (~750 tokens). This lists available domains. When a query matches a domain, the AI calls `load_skill()` to get the full instructions before answering.
 
 ## Three-tier loading
 
-Knowledge loads progressively to minimize token usage:
+Knowledge loads progressively:
 
 | Tier | What | When | Tokens |
 |------|------|------|--------|
@@ -25,9 +25,7 @@ Knowledge loads progressively to minimize token usage:
 
 A typical specialized query loads 1 skill = 1,000–3,000 tokens of domain knowledge.
 
-## Skills complement tools
-
-Skills and tool groups serve different purposes:
+## Skills vs tools
 
 | | `load_skill()` | `load_tool_group()` |
 |---|---|---|
@@ -92,7 +90,7 @@ A budget question typically loads both:
   </Accordion>
 
   <Accordion title="county-overview — General Solano County context">
-    Geography, demographics, economy, cities, landmarks, transportation, and history. Provides grounding context for general county questions.
+    Geography, demographics, economy, cities, landmarks, transportation, and history. Grounding context for general county questions.
 
     **References:** solano-encyclopedia.md
   </Accordion>

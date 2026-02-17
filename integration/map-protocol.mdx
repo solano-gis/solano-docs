@@ -3,7 +3,7 @@ title: "Map Protocol"
 description: "PostMessage contract between sage-web and sage-map"
 ---
 
-sage-web and sage-map communicate via `window.postMessage`. This is the contract that makes the "cowork map" possible — the AI controls a map that the user sees, and the user interacts with a map that the AI sees.
+sage-web and sage-map communicate via `window.postMessage`. This is the contract for the shared map — the AI controls a map that the user sees, and the user interacts with a map that the AI sees.
 
 ## Transport rules
 
@@ -58,7 +58,7 @@ The `command` field in `map-command` is a discriminated union:
 
 ### highlight-features
 
-Generalized feature selection via SQL WHERE expressions. Unlike `highlight-apns` (which only handles parcels by APN), this command queries any FeatureServer URL and highlights matching features with geometry-adaptive symbols:
+Feature selection via SQL WHERE expressions. Unlike `highlight-apns` (which only handles parcels by APN), this command queries any FeatureServer URL and highlights matching features with geometry-adaptive symbols:
 
 - **Polygon** — transparent fill, orange 3px outline
 - **Polyline** — orange 3px line
@@ -83,7 +83,7 @@ The AI constructs WHERE expressions from domain knowledge (e.g., `zone_abrev = '
 
 ### Ack-before-output
 
-The parent **waits for the iframe's command-ack before reporting success to the AI**. This is critical — without it, the AI sees "Map updated" immediately and hallucinates a description of what it "sees" before any screenshot arrives. If the iframe bridge is broken (origin mismatch, deployment protection, iframe not loaded), the AI would confidently describe a map state that doesn't exist.
+The parent **waits for the iframe's command-ack before reporting success to the AI**. This is critical — without it, the AI sees "Map updated" immediately and hallucinates a description of what it "sees" before any screenshot arrives. If the iframe bridge is broken (origin mismatch, deployment protection, iframe not loaded), the AI would describe a map state that doesn't exist.
 
 `ToolResult.tsx` calls `waitForCommandAck(commandId, 8000)` and reports one of three statuses in the tool output:
 

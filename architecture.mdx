@@ -3,7 +3,7 @@ title: "Architecture"
 description: "Four-service architecture designed for governance, not just convenience"
 ---
 
-SAGE is split across four independent Vercel deployments. This isn't a microservices fetish — it's a governance decision. Each service has a clear, defensible answer to two questions any IT review will ask:
+SAGE is split across four independent Vercel deployments. Each service has a clear answer to two questions any IT review will ask:
 
 1. **What data does the AI have access to?**
 2. **What happens if it breaks?**
@@ -16,25 +16,25 @@ SAGE is split across four independent Vercel deployments. This isn't a microserv
 
 <AccordionGroup>
   <Accordion title="sage-web — Chat UI + AI orchestration">
-    **What it does:** Hosts the chat interface, manages conversations, orchestrates AI tool calls, handles map screenshots, optimizes token budgets. Bundles domain knowledge from sage-knowledge and exposes it via `load_skill`.
+    **What it does:** Chat interface, conversation management, AI tool call orchestration, map screenshots, token budget optimization. Bundles domain knowledge from sage-knowledge via `load_skill`.
 
-    **What it accesses:** Only what sage-gov and sage-gis return via MCP, plus bundled read-only skill files from sage-knowledge. Cannot query databases or GIS services directly. This is the governance surface — authentication, moderation, audit logging, disclaimers, and rate limiting live here.
+    **What it accesses:** Only what sage-gov and sage-gis return via MCP, plus bundled read-only skill files. Cannot query databases or GIS services directly. Authentication, moderation, audit logging, disclaimers, and rate limiting live here.
 
     **If it breaks:** No chat. sage-gov and sage-gis continue serving data to any other MCP client. sage-map continues as a standalone map viewer.
   </Accordion>
 
   <Accordion title="sage-knowledge — Domain knowledge base">
-    **What it does:** Contains curated domain expertise across 10 skill areas — property research workflows, zoning interpretation, hazard analysis patterns, budget navigation, and more. Content is bundled into sage-web at build time and loaded progressively via the `load_skill` tool.
+    **What it does:** Domain expertise across 10 skill areas — property research workflows, zoning interpretation, hazard analysis, budget navigation, and more. Bundled into sage-web at build time and loaded via `load_skill`.
 
-    **What it accesses:** Nothing. This is a static content repository with no runtime, no API, and no external access. It's a build-time dependency of sage-web only.
+    **What it accesses:** Nothing. Static content repository — no runtime, no API, no external access. Build-time dependency of sage-web only.
 
-    **If it breaks:** AI still functions but loses domain-specific guidance. Tool calls work; interpretation quality degrades. The `<available_knowledge>` block disappears from the system prompt, and `load_skill` returns nulls.
+    **If it breaks:** AI still functions but loses domain-specific guidance. Tool calls work; interpretation quality degrades.
   </Accordion>
 
   <Accordion title="sage-gov — Public records MCP server">
-    **What it does:** Searches and retrieves public government documents — budget, county code, General Plan, organizational chart, Board of Supervisors meeting minutes.
+    **What it does:** Searches and retrieves public government documents — budget, county code, General Plan, org chart, Board of Supervisors meeting minutes.
 
-    **What it accesses:** Static JSON and SQLite files bundled at deploy time. All data is already public. No external API calls. No write access to anything.
+    **What it accesses:** Static JSON and SQLite files bundled at deploy time. All data is already public. No external API calls. No write access.
 
     **If it breaks:** Property research, map tools, and spatial queries continue working. Only budget/code/plan questions are affected.
   </Accordion>
@@ -42,15 +42,15 @@ SAGE is split across four independent Vercel deployments. This isn't a microserv
   <Accordion title="sage-gis — Spatial/GIS MCP server">
     **What it does:** Queries ArcGIS REST services for parcels, zoning, hazards, elevation, directions, and map rendering. Generates static map images and infographics.
 
-    **What it accesses:** Public ArcGIS FeatureServer and MapServer endpoints — the same services that power the county's existing public parcel viewer. Read-only. Cannot modify any GIS data.
+    **What it accesses:** Public ArcGIS FeatureServer and MapServer endpoints — the same services that power the county's public parcel viewer. Read-only.
 
     **If it breaks:** Budget, code, and plan queries continue working. Map rendering and property lookups are affected.
   </Accordion>
 
   <Accordion title="sage-map — Interactive ArcGIS map">
-    **What it does:** Renders an interactive ArcGIS web map embedded as an iframe. Accepts commands (pan, zoom, highlight parcels/features, toggle layers) and returns screenshots for AI vision.
+    **What it does:** Interactive ArcGIS web map embedded as an iframe. Accepts commands (pan, zoom, highlight, toggle layers) and returns screenshots for AI vision.
 
-    **What it accesses:** ArcGIS Online web maps via the standard Maps SDK. Same data as any ArcGIS web application. No MCP tools. No AI. Pure visualization.
+    **What it accesses:** ArcGIS Online web maps via the Maps SDK. Same data as any ArcGIS web application. No MCP tools. No AI.
 
     **If it breaks:** Chat and all tool queries continue working. Users lose the interactive map but still get inline map images from sage-gis.
   </Accordion>
@@ -100,13 +100,9 @@ Beyond parcel highlights, `update_map` supports **feature highlighting by WHERE 
 | **Compliance** | Hard to audit | Each service has a clear data inventory |
 | **Scaling** | Scale everything or nothing | Scale hot services independently |
 
-### Application as code
-
-SAGE's behavior, domain knowledge, and policy guardrails are all expressed as readable text — system prompts, skill files, tool definitions — not compiled into opaque application logic. Adding a data source means writing an MCP tool. Changing what the AI knows about zoning means editing a markdown file in sage-knowledge. Restricting behavior for a new deployment tier means adjusting a config value. The gap between understanding the domain and modifying the application is nearly zero, which means the system gets smarter as the team's knowledge grows — without vendor engagements or development cycles.
-
 ## Observability
 
-Every sage-web interaction is instrumented end-to-end and persisted to Vercel Blob storage. This gives full visibility into what happened during any conversation — tool chains, timing, token usage, errors, and the AI's final response.
+Every sage-web interaction is instrumented end-to-end and persisted to Vercel Blob storage. Full visibility into tool chains, timing, token usage, errors, and AI responses.
 
 ### What gets logged
 
@@ -148,11 +144,11 @@ The API is also queryable programmatically via `GET /api/logs?date=YYYY-MM-DD&id
 
 ### Design decisions
 
-- **Dual output**: `prodLog()` writes to both console.log (Vercel runtime logs for real-time tailing) and the collector (Blob persistence for historical queries)
-- **Full verbosity**: Tool args, tool results, AI response — all captured. This is an internal county app, not public SaaS. Vercel logs are behind auth.
-- **Size management**: String values capped at 4KB, base64 data stripped, to prevent oversized records
-- **Fire-and-forget persistence**: Blob write failure doesn't break the response — it logs to console and moves on
-- **No external deps**: Uses `@vercel/blob` (already in the Vercel ecosystem) and `crypto.randomUUID()` (built-in)
+- **Dual output**: `prodLog()` writes to both console.log (Vercel runtime logs) and the collector (Blob persistence)
+- **Full verbosity**: Tool args, tool results, AI response — all captured. Internal county app, not public SaaS.
+- **Size management**: String values capped at 4KB, base64 data stripped
+- **Fire-and-forget persistence**: Blob write failure doesn't break the response
+- **No external deps**: Uses `@vercel/blob` and `crypto.randomUUID()` (both built-in)
 
 ## Deployment
 

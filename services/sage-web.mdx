@@ -1,6 +1,6 @@
 ---
 title: "sage-web"
-description: "Chat UI and AI orchestration — where the intelligence lives"
+description: "Chat UI and AI orchestration"
 ---
 
 **Repository:** `solano-gis/sage-web` | **Deployed to:** Vercel (private URL) | **Tech:** Next.js 15, AI SDK v6, multi-model (Claude, Gemini, GPT)
@@ -51,18 +51,18 @@ This cuts schema overhead by ~50% while preserving full capability.
 
 ### Domain knowledge (skills)
 
-Alongside tool groups, sage-web bundles **domain knowledge** from [sage-knowledge](/knowledge) — curated expertise across 10 skill areas. The AI discovers available skills via an `<available_knowledge>` XML block in the system prompt (~750 tokens), then loads specific skills on demand via `load_skill()`.
+Alongside tool groups, sage-web bundles **domain knowledge** from [sage-knowledge](/knowledge) — expertise across 10 skill areas. The AI discovers available skills via an `<available_knowledge>` XML block in the system prompt (~750 tokens), then loads specific skills on demand via `load_skill()`.
 
-Skills complement tool groups: tool groups provide **tool schemas** (what tools are available), while skills provide **domain knowledge** (how to interpret results, what workflows to follow, what gotchas exist). See the [Knowledge Base](/knowledge) page for details.
+Tool groups provide **tool schemas** (what tools are available), while skills provide **domain knowledge** (how to interpret results, what workflows to follow, what gotchas exist). See [Knowledge Base](/knowledge).
 
 ## System prompt
 
 The system prompt in `lib/prompts.ts` (~25K characters) governs SAGE's behavior:
 
 - **Personality:** Friendly, concise, proactive with maps, honest about limits
-- **Scope:** Solano County focus (7 cities + unincorporated), graceful off-topic redirects
+- **Scope:** Solano County focus (7 cities + unincorporated), off-topic redirects
 - **Jurisdiction routing:** Automatic detection that mailing address ≠ legal jurisdiction
-- **Response scaling:** Quick answers for simple lookups, deep dives for policy research
+- **Response scaling:** Quick answers for simple lookups, detailed answers for policy research
 - **Tool chaining patterns:** Predefined workflows for common question types
 - **Sensitive topics:** Language rules for fire zones, flood zones, zoning, property boundaries
 
@@ -129,7 +129,7 @@ Tools execute in three different places:
 
 ### Ack-before-output
 
-`update_map` waits up to 8 seconds for the iframe's `command-ack` before calling `addToolOutput`. The tool output includes an `ackStatus` field (`confirmed`, `unconfirmed`, or `failed`) so the AI knows whether it can trust the map state. This prevents hallucinated map descriptions when the iframe bridge is broken. See [Map Protocol](/integration/map-protocol) for details.
+`update_map` waits up to 8 seconds for the iframe's `command-ack` before calling `addToolOutput`. The tool output includes an `ackStatus` field (`confirmed`, `unconfirmed`, or `failed`) so the AI knows whether it can trust the map state. See [Map Protocol](/integration/map-protocol) for details.
 
 ### Highlight metadata in tool output
 
@@ -147,4 +147,4 @@ For `highlight_features` calls, the tool output includes metadata from the ack:
 }
 ```
 
-This gives the AI the breadcrumbs to run follow-up queries on the same selection using `query_map_features` — e.g., `stats` mode for value distributions or `sample` mode for top-N lists — without auto-sending attribute data that could swamp the context window. The AI decides whether a follow-up is worth the tokens based on the user's question.
+This gives the AI metadata to run follow-up queries on the same selection using `query_map_features` — e.g., `stats` mode for value distributions or `sample` mode for top-N lists — without auto-sending attribute data that could fill the context window. The AI decides whether a follow-up is worth the tokens based on the user's question.

@@ -1,11 +1,9 @@
 ---
 title: "County Code"
-description: "365 pages of zoning law parsed into structured JSON — how recursive search over hierarchical data lets AI reason through cross-references and exemptions"
+description: "365 pages of zoning law parsed into structured JSON"
 ---
 
-SAGE provides full-text access to the Solano County Code — zoning regulations, subdivision rules, grading permits, park rules, and more. The AI can search across all chapters, retrieve specific sections by ID, and trace cross-references between related provisions. This turns a dense legal corpus into something an AI can navigate with precision.
-
-The key insight: structured data beats keyword search. When county code sections reference other sections ("except as provided in Section 26-15.2"), the AI follows the chain — loading the referenced section, checking its conditions, and synthesizing the full answer. A search engine returns fragments. SAGE returns reasoning.
+SAGE provides full-text access to the Solano County Code — zoning regulations, subdivision rules, grading permits, park rules, and more. The AI can search across all chapters, retrieve specific sections by ID, and trace cross-references between related provisions. When county code sections reference other sections ("except as provided in Section 26-15.2"), the AI follows the chain — loading the referenced section, checking its conditions, and synthesizing the full answer.
 
 **Data source:** Solano County Code, published by the county and parsed into structured JSON. 8 chapters, 323 sections, covering the land use regulations most relevant to GIS and planning queries.
 

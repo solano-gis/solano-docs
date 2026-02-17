@@ -3,7 +3,7 @@ title: "MCP Protocol"
 description: "How sage-web connects to sage-gis and sage-gov via Model Context Protocol"
 ---
 
-SAGE uses the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) for communication between sage-web and its two data servers. MCP is an open standard for connecting AI models to external tools and data sources.
+SAGE uses the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) for communication between sage-web and its two data servers.
 
 ## How it works
 
@@ -96,4 +96,4 @@ curl -X POST https://sage-gis.vercel.app/api/mcp \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
 ```
 
-This means sage-gis and sage-gov can be consumed by other AI systems, custom scripts, or future applications — independent of sage-web.
+sage-gis and sage-gov work with any MCP client — not just sage-web.

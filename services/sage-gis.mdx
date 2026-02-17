@@ -1,11 +1,11 @@
 ---
 title: "sage-gis"
-description: "Spatial and GIS MCP server — 28 tools for property, maps, hazards, and more"
+description: "Spatial/GIS MCP server — 28 tools"
 ---
 
 **Repository:** `solano-gis/sage-gis` | **Endpoint:** `sage-gis.vercel.app/api/mcp` | **Tech:** Next.js 15, MCP handler, ArcGIS REST APIs
 
-sage-gis is the spatial data engine. It provides 28 MCP tools for querying ArcGIS services, rendering maps, looking up properties, and analyzing hazards. All queries are read-only against public services.
+sage-gis provides 28 MCP tools for querying ArcGIS services, rendering maps, looking up properties, and analyzing hazards. All queries are read-only against public services.
 
 <Note>
 sage-gis does **not** use the @arcgis/core SDK. All GIS queries go through ArcGIS REST APIs via HTTP. This keeps the server lightweight and avoids SDK licensing complexity.
@@ -57,7 +57,7 @@ sage-gis does **not** use the @arcgis/core SDK. All GIS queries go through ArcGI
 
 | Tool | Purpose |
 |------|---------|
-| `search_places` | Unified location search — auto-detects place names, addresses, APNs, ZIP codes, coordinates |
+| `search_places` | Location search — auto-detects place names, addresses, APNs, ZIP codes, coordinates |
 
 ### GIS layer catalog (6 tools)
 

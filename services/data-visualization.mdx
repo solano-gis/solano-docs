@@ -3,7 +3,7 @@ title: "Data Visualization"
 description: "Inline Recharts-powered bar, pie, line, and area charts rendered client-side from AI-prepared data — no round-trip required"
 ---
 
-SAGE can render inline data visualizations directly in the chat when query results have a numeric dimension. Budget breakdowns become bar charts, zoning distributions become donut charts, staffing comparisons become horizontal bars. The AI retrieves the data, aggregates it, and calls `render_chart` to produce an SVG chart that appears inline alongside the response.
+SAGE renders inline charts when query results have a numeric dimension. Budget breakdowns become bar charts, zoning distributions become donut charts, staffing comparisons become horizontal bars. The AI retrieves the data, aggregates it, and calls `render_chart` to produce an SVG chart that appears inline alongside the response.
 
 The feature follows the same client-side tool pattern as `update_map` — the AI SDK streams a tool call with no server execute function, and the React component intercepts it in the browser.
 
@@ -13,7 +13,7 @@ The feature follows the same client-side tool pattern as `update_map` — the AI
   ![Donut chart showing land use breakdown by total acres](/images/chart-donut-land-use.png)
 </Frame>
 
-The AI's response combines the chart with a narrative summary and a supporting data table — the chart tells the shape of the data at a glance, while the table provides exact values.
+The AI combines the chart with narrative and a data table.
 
 ## How it works
 
@@ -34,7 +34,7 @@ User: "Show me the land use breakdown for the largest parcels"
 7. AI continues with narrative insight about the chart
 ```
 
-The tool call has no `execute` function on the server. The AI SDK streams it to the client in `input-available` state. `ToolResult.tsx` catches it, calls `addToolOutput()` with the chart data, and renders the `<Chart>` component inside a `<Suspense>` boundary. The entire render path is client-side — no additional API calls.
+The tool call has no `execute` function on the server. The AI SDK streams it to the client in `input-available` state. `ToolResult.tsx` catches it, calls `addToolOutput()` with the chart data, and renders the `<Chart>` component inside a `<Suspense>` boundary.
 
 ## Chart types
 

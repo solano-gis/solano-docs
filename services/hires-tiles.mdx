@@ -17,7 +17,7 @@ The fix: fetch tiles from one zoom level deeper than what the view requests, com
   ![Supersampled tile rendering](/images/hires-standard.jpg)
 </Frame>
 
-The improvement is subtle at normal viewing distance but significant for two audiences: users zooming into specific structures, and AI vision models analyzing screenshots where every pixel of detail helps distinguish building edges, roof materials, and vegetation boundaries.
+Two audiences benefit: users zooming into specific structures, and AI vision models analyzing screenshots where every pixel of detail helps distinguish building edges, roof materials, and vegetation boundaries.
 
 ## How it works
 
@@ -60,7 +60,7 @@ A `ENABLE_HIRES_TILES` flag at the top of the hook disables the feature globally
 
 SAGE captures map screenshots and sends them to Claude for spatial reasoning — identifying features, reading labels, understanding context. The `takeScreenshot` API can render vector layers (roads, labels, boundaries) at any resolution because they re-rasterize on the fly. But raster tile layers — aerial imagery, hillshade basemaps — are locked to their fetch resolution.
 
-With supersampling, a screenshot captured at 2184px width contains aerial imagery at the detail level of one zoom step closer. Building outlines are crisper. Solar panels become countable. Tree canopy edges resolve. For an AI model trying to describe what it sees at a property, this is the difference between "there appears to be a structure" and "there is a single-story building with a hip roof and rooftop solar array."
+With supersampling, a screenshot captured at 2184px width contains aerial imagery at the detail level of one zoom step closer. Building outlines are crisper. Solar panels become countable. Tree canopy edges resolve. Without it: "there appears to be a structure." With it: "there is a single-story building with a hip roof and rooftop solar array."
 
 ## Performance cost
 

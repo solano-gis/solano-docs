@@ -3,9 +3,9 @@ title: "What is SAGE?"
 description: "Solano Agent for Geographic Enquiry — an AI-powered GIS assistant for Solano County"
 ---
 
-SAGE is an AI assistant that integrates Solano County's fragmented data infrastructure into a single conversational interface. It connects live GIS services, public records, regulatory codes, budget documents, and an interactive map — all accessible through natural language.
+SAGE is an AI assistant that connects Solano County's data sources into one chat interface. It integrates live GIS services, public records, regulatory codes, budget documents, and an interactive map — all accessible through natural language.
 
-It is not a chatbot. It is a **collaborative spatial analyst** that shares an interactive map with users, autonomously chains multi-step queries across 59 specialized tools, and synthesizes answers grounded in real county data.
+A spatial analyst that shares an interactive map with users, chains multi-step queries across 59 tools, and answers using real county data.
 
 ## What makes SAGE different
 
@@ -14,17 +14,17 @@ It is not a chatbot. It is a **collaborative spatial analyst** that shares an in
     AI and user see the same interactive ArcGIS map. When SAGE pans, zooms, or highlights parcels, you see it happen. When you click a parcel, SAGE sees it too.
   </Card>
   <Card title="Real data, not training data" icon="database">
-    Every answer comes from live queries to county GIS services, the Assessor's database, county code, General Plan, and budget documents — not model hallucinations.
+    Queries live county GIS services, Assessor's database, county code, General Plan, and budget — not training data.
   </Card>
   <Card title="Autonomous tool chaining" icon="link">
-    Ask one question, get a multi-step analysis. SAGE decides which tools to call, in what order, building on each result. A property research query may chain 5-8 tools automatically.
+    SAGE decides which tools to call and chains them automatically.
   </Card>
   <Card title="Four independent services" icon="server">
-    Each service has a clear failure boundary and a defensible answer to "what data does the AI access?" and "what happens if it breaks?"
+    Each service has a clear failure boundary and a known data access scope.
   </Card>
 </Columns>
 
-## Platform at a glance
+## Architecture
 
 | Service | Deployed To | Role | Tools |
 |---------|-------------|------|-------|
@@ -53,10 +53,10 @@ It is not a chatbot. It is a **collaborative spatial analyst** that shares an in
 
 <Columns cols={2}>
   <Card title="AI agents" icon="robot">
-    Future versions of Claude working on this codebase. Architectural decisions, tool inventories, cross-service contracts, and data flow patterns you need to understand before making changes.
+    Future versions of Claude working on this codebase. Architecture, tool inventories, service contracts, data flows.
   </Card>
   <Card title="County IT leadership" icon="building-columns">
-    Technical decision makers evaluating whether this architecture conveys organizational risk. How the system is built, what it accesses, how it fails, and why the four-service split matters for governance.
+    Decision makers evaluating organizational risk. System architecture, data access, failure modes, governance model.
   </Card>
 </Columns>
 
