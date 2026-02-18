@@ -1,0 +1,127 @@
+---
+title: "PDF Export"
+description: "Professional cartographic PDFs generated from the same Web Map that powers the interactive viewer — with title, scale bar, north arrow, and parcel highlights"
+---
+
+SAGE can export the current map view as a downloadable PDF with professional layout elements — title, scale bar, north arrow, and author credit. The AI generates the PDF on request, matching the layers and extent the user is currently viewing.
+
+The feature uses ESRI's public Print Service with a key innovation: instead of building map JSON from scratch (which would require hand-designed symbology for 74 layers), it fetches the actual Solano Master Web Map definition from ArcGIS Online. This means the PDF inherits all layer symbology, labels, and rendering rules from the same Web Map that powers the interactive viewer.
+
+## What it looks like
+
+```
+User: "Give me a print map of this area with aerial and parcels"
+
+1. AI reads current map state (center, zoom, visible layers)
+2. AI calls export_map_pdf({
+     center: { latitude: 38.2494, longitude: -122.04 },
+     zoom: 17,
+     title: "Downtown Fairfield - Aerial & Parcels",
+     layers: ["Aerial 2025", "Parcels"],
+     basemap: "imagery-hybrid"
+   })
+3. sage-gis fetches Solano Master Web Map JSON from ArcGIS Online
+4. Flattens 20+ GroupLayers into 74 renderable layers
+5. Applies layer visibility overrides (only requested layers shown)
+6. Appends parcel highlight overlay if highlight_apn is set
+7. POSTs to ESRI Print Service with layout template + north arrow
+8. Returns temporary PDF URL (~1 hour expiry)
+9. Chat UI renders a download button with PDF icon
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `apn` | string | no | APN to center on and highlight |
+| `apns` | string[] | no | Multiple APNs to highlight |
+| `center` | object | no | Center point `{ latitude, longitude }` in WGS84 |
+| `bbox` | object | no | Bounding box `{ xmin, ymin, xmax, ymax }` in WGS84 |
+| `zoom` | number | no | Zoom level 1-20 (default: 17) |
+| `basemap` | enum | no | `topographic`, `imagery`, `imagery-hybrid`, `navigation` |
+| `highlight_apn` | string | no | APN to highlight with orange overlay |
+| `page_size` | enum | no | `letter` (default) or `a4` |
+| `title` | string | no | Title text at the top of the page |
+| `author` | string | no | Author credit (default: "SAGE - Solano County GIS") |
+| `layers` | string[] | no | Layer titles to show. When omitted, uses Web Map defaults |
+
+At least one location parameter (`apn`, `center`, or `bbox`) is required.
+
+## Layer visibility
+
+The `layers` parameter controls which of the Web Map's 74 layers appear in the PDF. The AI reads visible layer names from the interactive map's `state-snapshot` context, so when a user says "export what I'm looking at," the AI passes those same names.
+
+Layer name matching is fuzzy — bracketed suffixes like `[VECTOR_TILE]` and `[EXCLUSIVE]` are stripped before comparison. This means the AI can pass `"Parcels"` and it will match the Web Map's `"Parcels [VECTOR_TILE]"` layer.
+
+When `layers` is omitted, the Web Map's default layer visibility is used.
+
+## Pipeline architecture
+
+### Portal-based rendering
+
+The key architectural decision: fetch the Web Map JSON from ArcGIS Online rather than hardcoding layer definitions.
+
+```
+export_map_pdf called
+  → captureMapView({ webMapItemId, visibleLayers, ... })
+    → fetchWebMapItem("aefdec7fd0ab4038addca13262d31677")
+      → GET https://arcgis.com/sharing/rest/content/items/{id}/data?f=json
+    → flattenWebMapLayers(operationalLayers)
+      → Recursively unwrap GroupLayers (Aerials [EXCLUSIVE], City Zoning, Flood, etc.)
+      → Preserve symbology (drawingInfo), scale limits (minScale/maxScale), VTL styleUrls
+      → Result: 74 flat renderable layers
+    → Apply visibility overrides from layers parameter
+    → Append orange parcel highlight overlay if highlight_apn set
+    → Inject layoutOptions (title, author, scale bar, north arrow)
+    → POST to ESRI Print Service
+      → Format: PDF, Layout: Letter ANSI A Portrait, DPI: 200
+    → Return temporary URL
+```
+
+### Why not just pass the item ID?
+
+The ESRI public Print Service ignores the `itemId` field in Web Map JSON. It only renders what's explicitly defined in `operationalLayers`. This was confirmed by comparing MD5 hashes of output with and without `itemId` — identical results.
+
+The workaround: fetch the full Web Map definition from the ArcGIS Online portal REST API and pass its contents as the `operationalLayers` array.
+
+### Why not screenshot-to-PDF?
+
+The interactive map screenshot would capture exactly what the user sees, but:
+- Screenshots are raster — they don't scale when printed or zoomed in a PDF viewer
+- No layout elements (title, scale bar, north arrow, attribution)
+- Resolution limited to the iframe viewport (1092×1092)
+
+The Print Service renders at 200 DPI with vector parcel lines and labels that stay crisp at any zoom.
+
+## Layout
+
+All PDFs use the ESRI public Print Service's built-in layout templates.
+
+| Element | Status | Notes |
+|---------|--------|-------|
+| Title | Configurable | `titleText` in layoutOptions |
+| Author | Configurable | Default: "SAGE - Solano County GIS" |
+| Scale bar | Always on | Dual-unit (feet + kilometers) |
+| North arrow | Always on | Enabled via `mapSurroundInfos` (hidden by default in ESRI templates) |
+| Date | Automatic | Print service adds current date |
+| Attribution | Automatic | Data source credits from basemap/layers |
+| Legend | Auto-generated | From visible operational layers with symbology |
+
+Default orientation is **portrait** (8.5" × 11" Letter or A4). The `page_size` parameter selects between US Letter and international A4.
+
+## Client-side rendering
+
+The download button in the chat UI follows the same client-side tool intercept pattern as `render_chart` and `update_map`. `ToolResult.tsx` detects `export_map_pdf` tool calls and renders a styled download pill instead of the default tool output:
+
+- File download SVG icon
+- PDF title extracted from the tool output
+- "PDF" badge
+- Opens in new tab on click
+
+## Limitations
+
+- **Temporary URLs** — Print Service output URLs expire after approximately 1 hour. The AI is instructed to share the link immediately.
+- **No custom templates** — Limited to ESRI's 9 built-in layout templates. No custom logos, headers, or footprint layouts.
+- **Raster basemap quality** — Aerial/imagery tiles are raster and limited by the tile cache's zoom level. DPI 200 helps but very large-area maps will have lower-resolution imagery. Vector layers (parcels, boundaries) are always crisp.
+- **External layer timeouts** — FEMA, CAL FIRE, and other external services can be slow. The print service has retry logic with extended timeouts, but these layers occasionally fail to render.
+- **74 layers sent per request** — The full flattened Web Map is sent even though most layers are hidden. This makes the POST body ~150KB but hasn't caused issues with the public Print Service.

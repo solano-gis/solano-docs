@@ -39,6 +39,7 @@
           "services/lidar-elevation",
           "services/county-code",
           "services/data-visualization",
+          "services/pdf-export",
           "services/hires-tiles"
         ]
       },
