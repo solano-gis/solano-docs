@@ -1,25 +1,25 @@
 ---
 title: "The Shared Canvas"
-description: "How AI and user collaborate on a single interactive map — drawing, annotating, and reasoning together"
+description: "How AI and user draw on the same live map"
 ---
 
-Most AI systems have a one-way relationship with maps: the AI generates an image, the user looks at it. SAGE inverts this. The AI and the user share a single live ArcGIS map — the same pixels, the same layers, the same state. Neither has a private view. This page explains why that matters and how it works.
+The AI and user share a single live ArcGIS map — same pixels, same layers, same state. Neither has a private view.
 
 ## The core idea
 
-The AI doesn't have its own GIS renderer. It commands the same map the user sees via an iframe postMessage bridge. After every command, the map captures a screenshot and sends it back — this is how the AI "sees" what it did.
+The AI commands the same map the user sees via an iframe postMessage bridge. After every command, the map captures a screenshot and sends it back — the AI's "eyes."
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  sage-web (chat UI)                                     │
 │                                                         │
-│   User types message ──→ AI decides to draw ──→         │
+│   User message ──→ AI draws ──→                         │
 │   postMessage('annotate', polygons) ──────────────→     │
 │                                                    │    │
 │   ┌───────────────────────────────────────────┐    │    │
 │   │  sage-map (iframe)                        │◄───┘    │
 │   │                                           │         │
-│   │   Renders annotation on GraphicsLayer     │         │
+│   │   Renders on GraphicsLayer                │         │
 │   │   Captures screenshot (1092×1092 JPEG)    │         │
 │   │   Sends command-ack + screenshotDataUrl ──────→     │
 │   └───────────────────────────────────────────┘         │
@@ -28,152 +28,120 @@ The AI doesn't have its own GIS renderer. It commands the same map the user sees
 └─────────────────────────────────────────────────────────┘
 ```
 
-This creates a feedback loop: the AI draws, sees the result, and adjusts. The user watches it happen in real time.
+The AI draws, sees the result, and can adjust. The user watches in real time.
 
 ## Two drawing systems, one map
 
-The shared canvas has two independent drawing systems layered on the same map:
-
 | | AI annotations | User freehand |
 |---|---|---|
-| **Triggered by** | AI tool call (`annotate_map`) | User clicks pencil button |
+| **Triggered by** | `annotate_map` tool call | Pencil button |
 | **Shapes** | Markers, lines, polygons, circles, labels | Freehand polylines |
-| **Color** | 6-color palette (crimson, emerald, cobalt, violet, teal, slate) | Orange (SAGE brand) |
-| **Style** | Hand-drawn jitter (subdivide + perturb) | Smooth freehand strokes |
-| **Persistence** | Cleared by AI or on new annotation set | Persists until user clears |
-| **Rendered on** | Annotation GraphicsLayer | Sketch GraphicsLayer |
-| **AI awareness** | AI drew it — full awareness | AI receives stroke summaries + screenshot |
+| **Color** | 6-color palette (no orange) | Orange (SAGE brand) |
+| **Style** | Hand-drawn jitter | Smooth strokes |
+| **Persistence** | AI-managed (clear/replace by group) | User clears manually |
+| **Layer** | Annotation GraphicsLayer | Sketch GraphicsLayer |
+| **AI awareness** | Full (AI drew it) | Via stroke summaries + screenshot |
 
-The color separation is intentional. Orange is reserved exclusively for user actions (freehand drawing, parcel selection, feature highlights). The AI's six-color palette never includes orange, so it's always clear who drew what.
+Orange is reserved for user actions (drawing, selection, highlights). The AI palette excludes it, so who drew what is always clear.
 
 ## AI annotations
 
-When the AI calls `annotate_map`, sage-web forwards the annotation array to the iframe via the `annotate` command. sage-map renders each annotation on a dedicated `GraphicsLayer`:
-
 ### Color palette
 
-The AI chooses from six constrained colors instead of arbitrary hex values. This prevents clashing with the orange highlight system and keeps visuals consistent across sessions.
+Six constrained colors — no arbitrary hex. Avoids clashing with the orange highlight system.
 
 | Color | Hex | Typical use |
 |-------|-----|-------------|
-| `crimson` | `#DC2626` | Boundaries, danger zones, warnings |
-| `emerald` | `#059669` | Natural areas, parks, vegetation |
-| `cobalt` | `#2563EB` | Water, infrastructure, default |
+| `crimson` | `#DC2626` | Boundaries, danger, warnings |
+| `emerald` | `#059669` | Natural areas, parks |
+| `cobalt` | `#2563EB` | Water, infrastructure (default) |
 | `violet` | `#7C3AED` | Special or unique features |
 | `teal` | `#0D9488` | Alternative to green |
 | `slate` | `#475569` | Subtle reference lines |
 
 ### Fill behavior
 
-Polygons and circles default to **outline-only** — no fill. The AI sets `filled: true` when area shading helps communicate extent (e.g., shading a flood zone or park boundary). Filled regions render at 18% opacity so underlying map detail remains visible.
+Polygons and circles are **outline-only by default**. `filled: true` adds area shading at 18% opacity.
 
 ### Hand-drawn jitter
 
-AI-generated geometry is mathematically perfect — straight edges, exact angles. This looks authoritative in a way that's misleading, since the AI is approximating boundaries from memory, not querying survey-grade data.
+AI geometry is mathematically perfect — misleadingly authoritative for boundaries drawn from memory. The renderer post-processes with:
 
-The renderer applies a two-step post-process to produce an Excalidraw-style sketchy appearance:
+1. **Subdivide** — split edges into ~20px segments (5-corner polygon → 50+ points)
+2. **Jitter** — offset each intermediate point by ±4 pixels, scaled to map resolution
 
-1. **Subdivide** — Each edge is split into segments roughly 20 pixels long. An AI polygon with 5 corners becomes a path with 50+ intermediate points.
-2. **Jitter** — Each intermediate point is randomly offset by ±4 pixels (scaled to map resolution so it looks consistent at any zoom level).
-
-The jitter uses a seeded PRNG derived from the path coordinates, so the same geometry always produces the same wobble — no flicker when the map re-renders.
-
-First and last vertices of each path are kept exact so polygons close cleanly.
+Seeded PRNG ensures deterministic wobble (no flicker on re-render). First/last vertices stay exact so polygons close cleanly.
 
 <Note>
-The jitter only applies to AI annotations. User freehand strokes are already organic by nature and are rendered as-is. Data-layer highlights (parcels, zoning districts) also bypass jitter — those use exact geometry from the GIS server.
+Jitter applies only to AI annotations. User freehand strokes render as-is. Data-layer highlights use exact GIS geometry.
 </Note>
 
 ### Annotation groups
 
-Each `annotate` call can include a `groupId`. The AI uses this to manage independent sets of annotations:
+Each `annotate` call accepts a `groupId` for independent management:
 
 ```
 annotate_map({ id: "flood-zones", annotations: [...] })    // Draw flood zones
-annotate_map({ id: "fire-zones", annotations: [...] })     // Draw fire zones (flood zones still visible)
+annotate_map({ id: "fire-zones", annotations: [...] })     // Add fire zones
 annotate_map({ id: "flood-zones", annotations: [...] })    // Replace flood zones only
 ```
 
-Clearing by group ID is surgical — `clear-annotations` with `id: "flood-zones"` removes only that set.
-
 ## User freehand drawing
 
-The pencil button (embed mode only) activates freehand polyline drawing. The user draws directly on the map — circling areas, pointing at features, sketching boundaries — then sends a message to ask about what they drew.
+Pencil button (embed mode) activates freehand polyline drawing — circle areas, point at features, sketch boundaries, then ask.
 
 ### Draw-to-ask workflow
 
 ```
-1. User clicks pencil button → draw mode active (button turns orange)
-2. User draws one or more freehand strokes on the map
-3. Each completed stroke fires 'stroke-added' event (lightweight, no screenshot)
-4. sage-web shows stroke count + clear button above the chat input
-5. User types a question and sends
-6. sage-web calls 'get-sketch-summary' → iframe computes per-stroke bbox + screenshot
-7. Stroke summaries + screenshot injected into AI context as dynamic system prompt
-8. AI reasons about the drawings using both geometry and vision
+1. User clicks pencil → draw mode active (button turns orange)
+2. User draws freehand strokes
+3. Each stroke fires 'stroke-added' (lightweight, no screenshot)
+4. Stroke count + clear button shown above chat input
+5. User types question and sends
+6. sage-web requests 'get-sketch-summary' → per-stroke bbox + screenshot
+7. Summaries + screenshot injected into AI context
+8. AI reasons using both geometry and vision
 ```
 
 ### Per-stroke summaries
 
-Each freehand stroke is summarized with geographic metadata:
-
 ```
 StrokeSummary {
-  bbox: { north, south, east, west }    // Bounding box in degrees
-  centroid: { latitude, longitude }      // Center of the bbox
+  bbox: { north, south, east, west }
+  centroid: { latitude, longitude }
 }
 ```
 
-This gives the AI spatial coordinates without sending raw polyline vertices. The AI uses the bounding boxes for coarse location (e.g., "this circle is around central Fairfield") and the screenshot for visual context (e.g., "I can see you've circled a cluster of parcels near the highway").
+Bounding boxes give the AI coarse location; the screenshot provides visual context. Raw polyline vertices are not sent.
 
-### Persistence model
+### Persistence
 
-Unlike AI annotations (which the AI can clear and redraw), user freehand drawings persist until the user explicitly clears them via the trash button. This is intentional:
+User drawings persist until explicitly cleared. The user may draw across multiple messages, building up context the AI reasons about cumulatively.
 
-- The user may draw multiple strokes across multiple messages
-- Clearing would lose context the user is building up
-- The AI should reason about the cumulative drawing, not just the latest stroke
+## Visual layer stack
 
-## Three layers of visual communication
+| Layer | Contents | Controller | Color |
+|-------|----------|-----------|-------|
+| ArcGIS data | Parcels, zoning, aerials, hazards | AI + user | Layer symbology |
+| Highlights | Parcels by APN, features by WHERE | AI | Orange |
+| Annotations | AI-drawn shapes and labels | AI | 6-color palette + jitter |
+| Sketch | User freehand strokes | User | Orange |
 
-The shared canvas stack, from bottom to top:
-
-| Layer | Contents | Who controls | Color system |
-|-------|----------|-------------|--------------|
-| ArcGIS data layers | Parcels, zoning, aerials, hazards | AI (layer toggling) + user (layer list) | Layer symbology (varied) |
-| Highlight layer | Parcels by APN, features by WHERE | AI (`highlight-apns`, `highlight-features`) | Orange outlines/markers |
-| Annotation layer | AI-drawn markers, lines, polygons, labels | AI (`annotate_map`) | 6-color palette with jitter |
-| Sketch layer | User freehand strokes | User (pencil button) | Orange freehand lines |
-
-Each layer has a distinct visual language. A user looking at the map can immediately tell:
+A user can immediately distinguish:
 - **Crisp orange outlines** = real GIS data the AI queried
 - **Wobbly colored lines** = AI sketching from approximate knowledge
-- **Smooth orange freehand** = something the user drew
+- **Smooth orange freehand** = user-drawn
 
 ## Why this matters
 
-### No divergence
+**No divergence** — both parties see the same visual truth. When the AI says "I've outlined the marsh in green," the user sees that exact outline.
 
-In a typical chat-with-a-map system, the AI has a separate rendering pipeline. It generates a static image, the user looks at it, and if they want changes, they describe them in text. The AI and user are looking at different things.
+**AI self-correction** — the AI receives screenshots of its own drawings and can acknowledge gaps or offer to redraw.
 
-With the shared canvas, there is no divergence. When the AI says "I've outlined the marsh area in green," the user can see the exact outline. When the user draws a circle and asks "what's in here?", the AI sees the exact circle. Both parties work with the same visual truth.
+**Visual honesty** — wobbly jitter communicates that AI geometry is approximate, not survey-grade. Actual GIS data renders with exact geometry, visually distinct.
 
-### AI self-correction
+## See also
 
-Because the AI receives screenshots of its own drawings, it can self-correct. If it draws a polygon that misses part of an area (visible in the screenshot), it can acknowledge the gap and offer to redraw. This is only possible because the AI sees the same map the user does.
-
-### Visual honesty
-
-The hand-drawn jitter is a deliberate design choice. When the AI sketches "the Suisun Marsh area," it's working from approximate knowledge — not querying a marsh boundary layer. The wobbly lines communicate this imprecision honestly. Compare:
-
-- **Crisp polygon** → implies exact, authoritative data (misleading for AI-generated geometry)
-- **Sketchy polygon** → implies "roughly this area" (honest about the AI's uncertainty)
-
-Meanwhile, actual GIS data (parcel boundaries, zoning districts, flood zones) renders with exact geometry and orange highlighting — visually distinct and clearly authoritative.
-
-## Implementation details
-
-For protocol-level details, see:
-- [Map Protocol](/integration/map-protocol) — postMessage command/event registry, annotation types, sketch summary payload
-- [sage-map service docs](/services/sage-map) — rendering implementation, color palette, file structure
-- [sage-web service docs](/services/sage-web) — tool schema, context injection, screenshot pipeline
+- [Map Protocol](/integration/map-protocol) — command/event registry, annotation payloads
+- [sage-map](/services/sage-map) — rendering, palette, file structure
+- [sage-web](/services/sage-web) — tool schema, context injection

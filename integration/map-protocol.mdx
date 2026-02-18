@@ -76,23 +76,21 @@ The AI constructs WHERE expressions from domain knowledge (e.g., `zone_abrev = '
 
 ### annotate
 
-AI-drawn annotations rendered on a dedicated `GraphicsLayer`. Each annotation has a type and optional style:
+AI-drawn annotations on a dedicated `GraphicsLayer`:
 
-| Annotation type | Parameters | Rendering |
-|----------------|-----------|-----------|
-| `marker` | `latitude`, `longitude`, `label?` | Circle marker with optional text above |
-| `line` | `path: [lat, lon][]` | Polyline with hand-drawn jitter |
-| `polygon` | `rings: [lat, lon][][]` | Polygon outline (or filled if `style.filled: true`) with jitter |
-| `circle` | `latitude`, `longitude`, `radiusFeet` | Geodesic buffer polygon with jitter |
+| Type | Parameters | Rendering |
+|------|-----------|-----------|
+| `marker` | `latitude`, `longitude`, `label?` | Circle marker + optional text |
+| `line` | `path: [lat, lon][]` | Polyline with jitter |
+| `polygon` | `rings: [lat, lon][][]` | Outline (or filled) with jitter |
+| `circle` | `latitude`, `longitude`, `radiusFeet` | Geodesic buffer with jitter |
 | `label` | `latitude`, `longitude`, `text` | Text with white halo |
 
-Style uses a constrained color palette (`crimson`, `emerald`, `cobalt`, `violet`, `teal`, `slate`) — no free-form hex. Orange is excluded to avoid confusion with parcel/feature highlights. See [sage-map docs](/services/sage-map#ai-annotations) for the full palette table.
-
-Lines, polygons, and circles are post-processed with **vertex subdivision + seeded jitter** to produce a hand-drawn look.
+Color palette: `crimson`, `emerald`, `cobalt`, `violet`, `teal`, `slate`. No free-form hex — orange excluded. Lines, polygons, and circles get **vertex subdivision + seeded jitter** for a hand-drawn look. See [The Shared Canvas](/integration/shared-canvas) for design rationale.
 
 ### get-sketch-summary
 
-Requests a summary of the user's freehand drawings. The response (`sketch-summary` event) includes:
+Returns per-stroke bounding boxes from the user's freehand drawings:
 
 ```
 SketchSummaryPayload {
@@ -102,12 +100,12 @@ SketchSummaryPayload {
 }
 
 StrokeSummary {
-  bbox: { north, south, east, west }   // Geographic bounds of the stroke
-  centroid: { latitude, longitude }     // Center point
+  bbox: { north, south, east, west }
+  centroid: { latitude, longitude }
 }
 ```
 
-sage-web calls this at message-send time when the user has active drawings on the map. The per-stroke bounding boxes and screenshot are injected into the AI context as a dynamic system prompt section.
+Called at message-send time when strokes exist. Summaries + screenshot injected into AI context.
 
 ## Command lifecycle
 

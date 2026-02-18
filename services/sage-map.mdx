@@ -43,9 +43,7 @@ Examples: `where: "zone_abrev = 'R-1'"` highlights all R-1 zoning districts; `wh
 
 ### AI annotations
 
-The AI draws directly on the map using the `annotate` command — markers, lines, polygons, circles, and text labels. Annotations appear on a dedicated `GraphicsLayer` above all data layers but below the sketch layer.
-
-**Color palette** — six constrained colors, chosen for contrast against both aerial imagery and light basemaps. Orange is excluded (reserved for parcel/feature highlights).
+The AI draws on the map via the `annotate` command — markers, lines, polygons, circles, and labels. Six constrained colors (no orange — reserved for highlights). Polygons/circles are outline-only by default; `filled: true` adds 18% opacity shading.
 
 | Name | Hex | Typical use |
 |------|-----|-------------|
@@ -56,22 +54,19 @@ The AI draws directly on the map using the `annotate` command — markers, lines
 | `teal` | `#0D9488` | Alternative to green |
 | `slate` | `#475569` | Subtle reference lines |
 
-Polygons and circles are **outline-only by default**. The AI sets `filled: true` when area shading helps (rendered at 18% opacity).
+AI-drawn geometry is post-processed with vertex subdivision + seeded jitter to produce a sketchy, hand-drawn look — signaling that AI geometry is approximate, not survey-grade. Annotations support group IDs for selective clearing.
 
-**Hand-drawn jitter** — AI-drawn lines, polygons, and circles are post-processed with vertex subdivision and random perturbation to produce an Excalidraw-style sketchy look. This serves two purposes: better aesthetics and a visual signal that AI geometry is approximate, not survey-grade. The jitter is deterministic (seeded PRNG) and scales with map resolution so it looks consistent at any zoom.
-
-Annotations are grouped by ID so the AI can clear and redraw specific sets without affecting others.
+See [The Shared Canvas](/integration/shared-canvas) for the full design rationale.
 
 ### User freehand drawing (draw-to-ask)
 
-Users can draw directly on the map using the pencil button (embed mode only). This enables a "draw-to-ask" workflow — circle an area, draw an arrow, sketch a boundary, then ask the AI about it.
+Pencil button (embed mode) enables freehand drawing on the map. Users circle areas, sketch boundaries, then ask — the AI receives per-stroke bounding boxes + a screenshot.
 
-- **Persistent strokes** — drawings stay on the map until the user clears them (trash icon appears when strokes exist)
-- **Per-stroke geometry** — each stroke is summarized with its bounding box and centroid, sent to the AI on the next message
-- **Screenshot context** — the AI receives both the stroke summaries and a screenshot showing the drawings, enabling vision-based spatial reasoning
-- **No auto-clear** — unlike highlights, user drawings persist across AI responses so the user can keep adding
+- **Persistent** — strokes stay until the user clears (trash icon)
+- **Per-stroke summaries** — bbox and centroid for each stroke, injected into AI context
+- **Cumulative** — drawings persist across messages so the user can build up context
 
-The freehand tool uses ArcGIS `SketchViewModel` in `polyline` + `freehand` mode with orange strokes (SAGE brand color). Vertex symbols are hidden during active drawing for a clean visual.
+Uses ArcGIS `SketchViewModel` in `polyline` + `freehand` mode. Orange strokes, hidden vertex symbols during active drawing.
 
 ### Parcel interaction
 
