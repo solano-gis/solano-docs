@@ -41,6 +41,38 @@ The `highlight-features` ack includes metadata: `featureCount`, `exceededLimit`,
 
 Examples: `where: "zone_abrev = 'R-1'"` highlights all R-1 zoning districts; `where: "valland > 500000"` highlights high-value parcels.
 
+### AI annotations
+
+The AI draws directly on the map using the `annotate` command — markers, lines, polygons, circles, and text labels. Annotations appear on a dedicated `GraphicsLayer` above all data layers but below the sketch layer.
+
+**Color palette** — six constrained colors, chosen for contrast against both aerial imagery and light basemaps. Orange is excluded (reserved for parcel/feature highlights).
+
+| Name | Hex | Typical use |
+|------|-----|-------------|
+| `crimson` | `#DC2626` | Boundaries, danger, warnings |
+| `emerald` | `#059669` | Natural areas, parks |
+| `cobalt` | `#2563EB` | Water, infrastructure (default) |
+| `violet` | `#7C3AED` | Special or unique features |
+| `teal` | `#0D9488` | Alternative to green |
+| `slate` | `#475569` | Subtle reference lines |
+
+Polygons and circles are **outline-only by default**. The AI sets `filled: true` when area shading helps (rendered at 18% opacity).
+
+**Hand-drawn jitter** — AI-drawn lines, polygons, and circles are post-processed with vertex subdivision and random perturbation to produce an Excalidraw-style sketchy look. This serves two purposes: better aesthetics and a visual signal that AI geometry is approximate, not survey-grade. The jitter is deterministic (seeded PRNG) and scales with map resolution so it looks consistent at any zoom.
+
+Annotations are grouped by ID so the AI can clear and redraw specific sets without affecting others.
+
+### User freehand drawing (draw-to-ask)
+
+Users can draw directly on the map using the pencil button (embed mode only). This enables a "draw-to-ask" workflow — circle an area, draw an arrow, sketch a boundary, then ask the AI about it.
+
+- **Persistent strokes** — drawings stay on the map until the user clears them (trash icon appears when strokes exist)
+- **Per-stroke geometry** — each stroke is summarized with its bounding box and centroid, sent to the AI on the next message
+- **Screenshot context** — the AI receives both the stroke summaries and a screenshot showing the drawings, enabling vision-based spatial reasoning
+- **No auto-clear** — unlike highlights, user drawings persist across AI responses so the user can keep adding
+
+The freehand tool uses ArcGIS `SketchViewModel` in `polyline` + `freehand` mode with orange strokes (SAGE brand color). Vertex symbols are hidden during active drawing for a clean visual.
+
 ### Parcel interaction
 
 - **Click** → `parcel-clicked` event with APN, address, coordinates
@@ -77,6 +109,7 @@ When loaded with `?embed=true`, sage-map optimizes for iframe context:
 - Hides header/footer
 - Collapses layer list by default
 - Shows selection badge for multi-parcel workflows
+- Enables freehand drawing tool (pencil button, top-left)
 - Posts all events to parent window via postMessage
 
 Typical iframe URL:
@@ -102,7 +135,8 @@ sage-map/
 │       │   └── useElevationReadout.ts   ← LiDAR display
 │       └── utils/
 │           ├── highlightParcels.ts      ← Parcel highlight by APN
-│           └── highlightFeatures.ts     ← Generic feature highlight by WHERE expression
+│           ├── highlightFeatures.ts     ← Generic feature highlight by WHERE expression
+│           └── renderAnnotations.ts     ← AI annotation rendering + jitter
 ├── lib/
 │   ├── shared/map-protocol/index.ts    ← CANONICAL postMessage types
 │   ├── esri/webmaps.ts                 ← Web Map ID registry

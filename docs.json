@@ -47,7 +47,8 @@
         "group": "Integration",
         "pages": [
           "integration/mcp",
-          "integration/map-protocol"
+          "integration/map-protocol",
+          "integration/shared-canvas"
         ]
       },
       {

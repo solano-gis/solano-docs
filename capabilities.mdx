@@ -66,6 +66,8 @@ For how these capabilities are built, see [Architecture](/architecture). For the
 | Map legend/symbology | AI reads layer renderer data (field, values, labels, colors) to describe what map colors represent |
 | Map vision | Every map command returns a screenshot the AI analyzes before responding |
 | Object detection | Vision model (Gemini Flash) locates objects in map screenshots (buildings, pools, solar panels, aircraft) and converts pixel positions to real-world coordinates |
+| AI map annotations | AI draws markers, lines, polygons, circles, and labels on the shared map — with a constrained 6-color palette and hand-drawn jitter for a sketchy look |
+| Freehand draw-to-ask | User draws directly on the map with a pencil tool, then asks about what they circled — AI receives stroke geometry + screenshot |
 | Inline charts | Bar, horizontal bar, pie, donut, line, and area charts rendered inline in chat — supports currency, percent, and acres formatting |
 | PDF map export | Professional cartographic PDF with title, scale bar, north arrow — inherits full symbology from the Solano Master Web Map |
 | AI infographics | Diagrams, comparison graphics, and visualizations generated via AI image generation |
@@ -121,8 +123,8 @@ SAGE loads domain expertise on demand via the [skill system](/knowledge). Each s
 | MCP tools (sage-gis) | 33 |
 | MCP tools (sage-gov) | 30 |
 | Local tools (sage-web server-side) | 4 |
-| Client-side tools (browser) | 3 |
-| **Total tools** | **70** |
+| Client-side tools (browser) | 4 |
+| **Total tools** | **71** |
 | Knowledge skills | 10 |
 | Queryable map layers | 30+ |
 | GIS data categories | 11 |

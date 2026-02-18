@@ -32,6 +32,8 @@ Origins are allowlisted on both sides (`SAGE_MAP_ORIGIN` in production, `localho
 | `identify-result` | `IdentifyResultPayload` | User clicked identify — all features at point + screenshot. Triggers AI auto-send. |
 | `selection-changed` | `SelectionPayload` | Shift+click add/remove/clear. All selected features + count + action type. |
 | `screenshot` | `{ dataUrl, error? }` | Response to `request-screenshot` (fallback path). |
+| `stroke-added` | `{ strokeCount }` | User completed a freehand stroke. Lightweight — no screenshot. |
+| `sketch-summary` | `SketchSummaryPayload` | Response to `get-sketch-summary`. Per-stroke bounding boxes + screenshot. |
 
 ### Parent → Iframe
 
@@ -55,6 +57,12 @@ The `command` field in `map-command` is a discriminated union:
 | `add-layer` | `url`, `title`, `layerType`, `opacity` | Add external service overlay |
 | `remove-layer` | `title` | Remove an added overlay |
 | `set-preset` | `preset` | Switch entire web map (parcels, planning, hazards, master) |
+| `annotate` | `annotations[]`, `id?` | Draw AI annotations (markers, lines, polygons, circles, labels) |
+| `clear-annotations` | `id?` | Clear all annotations, or only a specific group by ID |
+| `start-sketch` | `tool` | Start user freehand drawing (`freehand`) |
+| `cancel-sketch` | — | Cancel active sketch tool |
+| `clear-sketch` | — | Clear all user-drawn strokes |
+| `get-sketch-summary` | — | Request per-stroke bounding boxes + screenshot |
 
 ### highlight-features
 
@@ -65,6 +73,41 @@ Feature selection via SQL WHERE expressions. Unlike `highlight-apns` (which only
 - **Point** — orange circle marker, size 10, white outline
 
 The AI constructs WHERE expressions from domain knowledge (e.g., `zone_abrev = 'R-1'`, `HAZ_CLASS = 'Very High'`). sage-web resolves layer titles to FeatureServer URLs via its layer registry before sending the command. The `maxFeatures` cap (default 5,000) prevents runaway queries. The query uses `maxRecordCountFactor: 5` to override the typical ArcGIS REST `maxRecordCount` limit (often 1,000–2,000).
+
+### annotate
+
+AI-drawn annotations rendered on a dedicated `GraphicsLayer`. Each annotation has a type and optional style:
+
+| Annotation type | Parameters | Rendering |
+|----------------|-----------|-----------|
+| `marker` | `latitude`, `longitude`, `label?` | Circle marker with optional text above |
+| `line` | `path: [lat, lon][]` | Polyline with hand-drawn jitter |
+| `polygon` | `rings: [lat, lon][][]` | Polygon outline (or filled if `style.filled: true`) with jitter |
+| `circle` | `latitude`, `longitude`, `radiusFeet` | Geodesic buffer polygon with jitter |
+| `label` | `latitude`, `longitude`, `text` | Text with white halo |
+
+Style uses a constrained color palette (`crimson`, `emerald`, `cobalt`, `violet`, `teal`, `slate`) — no free-form hex. Orange is excluded to avoid confusion with parcel/feature highlights. See [sage-map docs](/services/sage-map#ai-annotations) for the full palette table.
+
+Lines, polygons, and circles are post-processed with **vertex subdivision + seeded jitter** to produce a hand-drawn look.
+
+### get-sketch-summary
+
+Requests a summary of the user's freehand drawings. The response (`sketch-summary` event) includes:
+
+```
+SketchSummaryPayload {
+  strokes: StrokeSummary[]
+  strokeCount: number
+  screenshotDataUrl?: string
+}
+
+StrokeSummary {
+  bbox: { north, south, east, west }   // Geographic bounds of the stroke
+  centroid: { latitude, longitude }     // Center point
+}
+```
+
+sage-web calls this at message-send time when the user has active drawings on the map. The per-stroke bounding boxes and screenshot are injected into the AI context as a dynamic system prompt section.
 
 ## Command lifecycle
 
