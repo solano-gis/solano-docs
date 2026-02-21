@@ -1,6 +1,6 @@
 ---
 title: "Oblique Imagery"
-description: "Angled aerial photography from Sanborn surveys — how SAGE serves high-res crops from 50MB Cloud Optimized GeoTIFFs"
+description: "Angled aerial photography from Sanborn surveys — how SAGE serves high-res crops with street labels from 50MB Cloud Optimized GeoTIFFs"
 ---
 
 Oblique (angled) aerial imagery is available for any location in Solano County. Unlike standard nadir (top-down) aerials, oblique views show building facades, roof details, and terrain from an angle — useful for property assessment, damage inspection, and 3D context.
@@ -9,14 +9,14 @@ Oblique (angled) aerial imagery is available for any location in Solano County. 
 
 ## What the tool does
 
-`get_oblique_imagery` takes a coordinate and returns high-resolution cropped images displayed inline in the chat. Each crop is extracted from a Cloud Optimized GeoTIFF (COG) — typically 50-75MB — but only the relevant tiles are fetched via HTTP range requests.
+`get_oblique_imagery` takes a coordinate and returns high-resolution cropped images with street labels displayed inline in the chat. Each crop is extracted from a Cloud Optimized GeoTIFF (COG) — typically 50-75MB — but only the relevant tiles are fetched via HTTP range requests.
 
 ```
 User: "Show me 675 Texas St from the south"
 
 → geocode_address("675 Texas St, Fairfield")
 → get_oblique_imagery(lat, lon, direction: "south")
-→ Inline JPEG crop displayed in chat
+→ Inline JPEG crop with street labels displayed in chat
 ```
 
 ## Parameters
@@ -50,25 +50,57 @@ The AI maps natural language to zoom levels — "zoom in on the roof" triggers z
 
 ### Step by step
 
-1. **Footprint lookup** — The MCP tool queries Sanborn's `FindFootprints` API with the target coordinate (projected to State Plane CA Zone 2). Returns metadata for available oblique images: camera direction, COG URL, image dimensions, and footprint corners.
+1. **Footprint lookup** — The MCP tool queries Sanborn's `FindFootprints` API with the target coordinate (projected to State Plane CA Zone 2). Returns metadata for available oblique images: camera parameters, exterior orientation (EO), COG URL, image dimensions, and footprint corners.
 
 2. **Best image selection** — For each requested direction, selects the image whose footprint center is closest to the target point (least off-center distortion).
 
-3. **Crop URL construction** — Builds a URL to the internal `/api/oblique-preview` route with the COG source URL, target coordinate, footprint corners, crop size, and COG pyramid level.
+3. **Crop URL construction** — Builds a URL to the internal `/api/oblique-preview` route with the COG source URL, target coordinate, footprint corners, exterior orientation data, crop size, and COG pyramid level.
 
-4. **COG range-request fetch** — The preview route opens the COG via HTTP range requests (no full download), computes a homography from ground coordinates to pixel space, and reads only the intersecting tiles for the crop window.
+4. **COG range-request fetch** — The preview route opens the COG via HTTP range requests (no full download), projects the target point into pixel space using collinearity equations, and reads only the intersecting tiles for the crop window.
 
-5. **Image encoding** — Raw YCbCr raster data is converted to RGBA, encoded as JPEG (75% quality), and returned with dimension headers.
+5. **Street label overlay** — Road centerlines are queried from the county GIS, projected into crop-pixel space, and composited as an SVG overlay with a center marker via sharp. Labels use USPS abbreviations (ST, AVE, BLVD) and are oriented along the road direction.
 
-6. **Inline display** — The MCP tool receives the JPEG as base64, attaches it as an image content block, and the chat UI renders it inline.
+6. **Image encoding** — Raw YCbCr raster data is converted to RGBA, encoded as JPEG (75% quality), and returned with dimension headers.
 
-## Homography transform
+7. **Inline display** — The MCP tool receives the JPEG as base64, attaches it as an image content block, and the chat UI renders it inline.
 
-The core math problem: given a ground coordinate in State Plane feet, find the corresponding pixel in an oblique image. This isn't a simple affine transform because oblique images have perspective distortion.
+## Ground-to-pixel projection
 
-The solution is a **projective (homography) transform** computed from 4 known correspondences — the footprint corners in ground space map to the image corners in pixel space. This gives an 8-parameter transform that handles the perspective projection.
+The core math problem: given a ground coordinate in State Plane feet, find the corresponding pixel in an oblique image. Oblique images have significant perspective distortion that a simple affine transform can't model.
 
-The homography is computed at full-resolution dimensions, then pixel coordinates are scaled by the COG level's reduction factor. This means the same footprint data works at any zoom level.
+### Collinearity equations (primary)
+
+The Sanborn API provides full photogrammetric exterior orientation for each image:
+
+| Parameter | Description |
+|-----------|-------------|
+| `cameraX`, `cameraY`, `cameraZ` | Camera position in State Plane + altitude (feet) |
+| `omega`, `phi`, `kappa` | Rotation angles — tilt, roll, heading (radians) |
+| `focalLength` | Lens focal length (mm) |
+| `pixelSize` | Sensor pixel pitch (mm) |
+| `imageWidth`, `imageHeight` | Image dimensions (pixels) |
+
+These feed standard photogrammetric collinearity equations with a 3×3 rotation matrix (R = Rκ · Rφ · Rω) to compute an exact 3D→2D projection for any ground point. This is the same model used by ArcGIS Pro and professional photogrammetry tools.
+
+Ground elevation (`gz` parameter) defaults to 0 but can be overridden. For flat urban areas at typical Sanborn flight altitudes (4,000-8,000 ft), this introduces < 0.5% error.
+
+### Homography fallback
+
+When exterior orientation data is unavailable, a 4-point projective (homography) transform is computed from the footprint corners (ground → pixel). This is an 8-parameter 2D approximation that works for centering the crop but accumulates error toward the image edges.
+
+## Street labels
+
+Every crop includes Apple 3D Maps-style floating street labels and a center crosshair marker. No geometry lines, no parcel boundaries — just text and a marker.
+
+| Component | Details |
+|-----------|---------|
+| **Street names** | Queried from Solano County Road Centerlines FeatureServer. USPS abbreviations (ST, AVE, BLVD). Up to 6 labels per crop. |
+| **Label placement** | Longest visible road segment per name. Midpoint along the clipped polyline. Angle follows road direction, flipped to always read left-to-right. |
+| **Collision removal** | Labels within 150px of a higher-priority (longer road) label are dropped. |
+| **Center marker** | White X with ring at crop center. Black outer stroke for contrast. |
+| **Rendering** | SVG overlay composited onto JPEG via sharp. Double-text technique for halo (black stroke + white fill). |
+
+Labels are enabled by default on all crops (`&labels=true` in the URL). The `&debug=true` parameter overlays colored road centerlines and label anchor points for diagnostic purposes.
 
 ## COG proxy security
 
@@ -80,3 +112,4 @@ The `/api/oblique-preview` route only proxies requests to `services.sanborn.com`
 - **Currency:** 2022-2024 captures only. Structures built after the flight date won't appear.
 - **Nadir vs standard aerials:** For top-down views, the regular aerial imagery layers (2004-2025) in the interactive map are usually better.
 - **Crop window:** Fixed 1500px square crop at the target coordinate. If the target projects near the edge of the source image, the crop shifts to stay within bounds.
+- **Label accuracy:** Projection accuracy depends on ground elevation. Flat urban areas are excellent; hilly terrain may show slight label displacement.
